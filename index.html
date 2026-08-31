@@ -473,7 +473,9 @@ function newSet(prev) {
   };
 }
 
-function newEntry(exercise, targetSets) {
+// item: template item ({targetSets, plan?}) or null for mid-workout adds.
+// Prefill priority: last finished session > template plan > empty rows.
+function newEntry(exercise, item) {
   const entry = {
     id: uid(), exerciseId: exercise.id, exerciseName: exercise.name,
     type: 'strength', sets: [], note: ''
@@ -483,8 +485,14 @@ function newEntry(exercise, targetSets) {
     entry.sets = last.entry.sets.filter(s => s.done).map(s => newSet(s));
     entry.note = last.entry.note || ''; // notes are persistent cues (form, RPE targets) — carry forward editable
   }
+  if (entry.sets.length === 0 && item && item.plan && item.plan.length) {
+    entry.sets = item.plan.map(p => ({
+      id: uid(), weight: p.weight, unit: p.unit || DB.settings.unit,
+      reps: p.reps, warmup: !!p.warmup, note: '', done: false, completedAt: null
+    }));
+  }
   if (entry.sets.length === 0) {
-    const n = Math.max(1, targetSets || 3);
+    const n = Math.max(1, (item && item.targetSets) || 3);
     for (let i = 0; i < n; i++) entry.sets.push(newSet(null));
   }
   return entry;
@@ -497,7 +505,7 @@ function startSession(routine, template) {
     template.items.forEach(it => {
       const ex = exerciseById(it.exerciseId);
       if (ex && !ex.archived) {
-        const entry = newEntry(ex, it.targetSets);
+        const entry = newEntry(ex, it);
         entry.ss = !!it.ss; // superset-linked with the NEXT entry
         entries.push(entry);
       }
@@ -1229,18 +1237,23 @@ function libRoutines() {
 }
 
 function libExercises() {
-  const q = UI.exSearch.toLowerCase();
+  return '<button class="btn full" data-action="new-exercise" style="margin-bottom:12px">+ New exercise</button>' +
+    '<input type="text" placeholder="Search…" autocomplete="off" value="' + esc(UI.exSearch) + '" data-input="ex-search" style="margin-bottom:12px">' +
+    '<div id="ex-list">' + exListHTML() + '</div>';
+}
+function exListHTML() {
+  const q = UI.exSearch.trim().toLowerCase();
   const list = DB.exercises
     .filter(e => !e.archived && (!q || e.name.toLowerCase().includes(q)))
     .sort((a, b) => a.name.localeCompare(b.name));
   const archived = DB.exercises.filter(e => e.archived && (!q || e.name.toLowerCase().includes(q)));
-  let h = '<button class="btn full" data-action="new-exercise" style="margin-bottom:12px">+ New exercise</button>' +
-    '<input type="text" placeholder="Search…" value="' + esc(UI.exSearch) + '" data-input="ex-search" style="margin-bottom:12px">';
+  let h = '';
   for (const e of list) {
     h += '<div class="list-item" data-action="edit-exercise" data-id="' + e.id + '">' +
       '<div class="grow"><b>' + esc(e.name || '(unnamed)') + '</b></div>' +
       '<span class="muted">›</span></div>';
   }
+  if (!list.length) h += '<div class="muted" style="padding:6px 0 12px">No matches.</div>';
   if (archived.length) {
     h += '<h2>Archived</h2>' + archived.map(e =>
       '<div class="list-item" style="opacity:.6" data-action="edit-exercise" data-id="' + e.id + '">' +
@@ -1275,6 +1288,55 @@ function templateById(routineId, templateId) {
   return { r, t };
 }
 
+// Planned sets on a template item: [{weight, unit, reps, warmup}] — the cold-start seed
+// for exercises with no workout history. Real history always wins over the plan.
+function ensurePlan(it) {
+  if (!it.plan) {
+    it.plan = Array.from({ length: Math.max(1, it.targetSets || 3) }, () =>
+      ({ weight: null, unit: DB.settings.unit, reps: null, warmup: false }));
+  }
+  return it.plan;
+}
+function planSummary(it) {
+  if (!it.plan || !it.plan.some(p => p.weight != null || p.reps != null)) {
+    return (it.plan ? it.plan.length : it.targetSets) + ' sets — tap to plan weights & reps';
+  }
+  const u = DB.settings.unit;
+  return it.plan.map(p => {
+    const w = p.weight != null ? fmtNum(roundDisplay(convertWeight(p.weight, p.unit || u, u), u)) : '—';
+    return (p.warmup ? 'W ' : '') + w + '×' + (p.reps != null ? p.reps : '—');
+  }).join(', ');
+}
+
+function viewTemplateExercise() {
+  const { r, t } = templateById(UI.params.routineId, UI.params.templateId);
+  const it = t && t.items[UI.params.idx];
+  if (!it) return '<div class="empty-state">Exercise not found.</div>';
+  const ex = exerciseById(it.exerciseId);
+  const plan = ensurePlan(it);
+  const u = DB.settings.unit;
+  let h = '<div class="row" style="margin-bottom:12px">' + backBtn() +
+    '<div class="grow"><h1 style="margin:0">' + esc(ex ? ex.name : '(deleted)') + '</h1>' +
+    '<div class="muted small">' + esc(t.name || 'Template') + ' — planned sets</div></div>' +
+    '<button class="btn sm" data-action="back">Done</button></div>' +
+    '<p class="muted small" style="margin-bottom:10px">These pre-fill the workout until there\'s real history for this exercise — after that, the last session wins.</p>' +
+    '<div class="card"><div class="set-grid">';
+  plan.forEach((p, i) => {
+    h += '<div class="set-row">' +
+      '<button class="set-num ' + (p.warmup ? 'warmup' : '') + '" data-action="plan-toggle-warmup" data-row="' + i + '" title="Toggle warm-up">' +
+      (p.warmup ? 'W' : (i + 1)) + '</button>' +
+      '<span class="wcell"><input class="num" type="text" inputmode="decimal" placeholder="' + u + '" value="' + esc(displayWeight(p)) + '" data-input="plan-weight" data-row="' + i + '"></span>' +
+      '<span class="x">×</span>' +
+      '<span class="rcell"><input class="num" type="text" inputmode="numeric" placeholder="reps" value="' + (p.reps == null ? '' : p.reps) + '" data-input="plan-reps" data-row="' + i + '"></span>' +
+      '</div>';
+  });
+  h += '</div><div class="row" style="margin-top:10px">' +
+    '<button class="btn ghost sm" data-action="plan-add-set">+ Add set</button>' +
+    (plan.length > 1 ? '<button class="btn ghost sm" style="color:var(--red)" data-action="plan-del-set">− Remove set</button>' : '') +
+    '</div></div>';
+  return h;
+}
+
 function viewTemplateEdit() {
   const { r, t } = templateById(UI.params.routineId, UI.params.templateId);
   if (!r || !t) return '<div class="empty-state">Template not found.</div>';
@@ -1289,9 +1351,11 @@ function viewTemplateEdit() {
       '<div style="display:flex;flex-direction:column;gap:2px">' +
       '<button class="iconbtn" style="padding:2px 8px" data-action="routine-item-up" data-idx="' + i + '" ' + (i === 0 ? 'disabled' : '') + '>▲</button>' +
       '<button class="iconbtn" style="padding:2px 8px" data-action="routine-item-down" data-idx="' + i + '" ' + (i === t.items.length - 1 ? 'disabled' : '') + '>▼</button></div>' +
-      '<div class="grow"><b>' + esc(e ? e.name : '(deleted)') + '</b><div class="muted small">target sets</div></div>' +
+      '<div class="grow" style="cursor:pointer" data-action="edit-template-exercise" data-idx="' + i + '">' +
+      '<b>' + esc(e ? e.name : '(deleted)') + '</b>' +
+      '<div class="muted small">' + esc(planSummary(it)) + ' ›</div></div>' +
       '<div class="stepper"><button data-action="routine-sets-dec" data-idx="' + i + '">−</button>' +
-      '<span class="val">' + it.targetSets + '</span>' +
+      '<span class="val">' + (it.plan ? it.plan.length : it.targetSets) + '</span>' +
       '<button data-action="routine-sets-inc" data-idx="' + i + '">+</button></div>' +
       '<button class="iconbtn" data-action="routine-item-remove" data-idx="' + i + '">✕</button></div>';
     if (i < t.items.length - 1) {
@@ -1378,26 +1442,26 @@ let pickerContext = null; // 'workout' | 'routine'
 function openExercisePicker(context) {
   pickerContext = context;
   UI.pickerSearch = '';
-  renderPicker();
+  // Fixed-height results area + create-button slot: typing updates ONLY their contents,
+  // so the input never re-renders (keyboard stays put) and the sheet never changes size.
+  openSheet('<h3>Add exercise</h3>' +
+    '<input type="text" placeholder="Search or type a new name…" autocomplete="off" data-input="picker-search" style="margin-bottom:10px">' +
+    '<div id="picker-results" style="height:42dvh;overflow-y:auto">' + pickerResultsHTML() + '</div>' +
+    '<div id="picker-create-slot" style="min-height:54px;padding-top:8px">' + pickerCreateHTML() + '</div>');
 }
-function renderPicker() {
-  const q = UI.pickerSearch.toLowerCase();
+function pickerResultsHTML() {
+  const q = UI.pickerSearch.trim().toLowerCase();
   const list = DB.exercises
     .filter(e => !e.archived && (!q || e.name.toLowerCase().includes(q)))
     .sort((a, b) => a.name.localeCompare(b.name));
-  let h = '<h3>Add exercise</h3>' +
-    '<input type="text" placeholder="Search…" value="' + esc(UI.pickerSearch) + '" data-input="picker-search" style="margin-bottom:10px">' +
-    '<div style="max-height:45dvh;overflow-y:auto">';
-  for (const e of list) {
-    h += '<div class="list-item" data-action="picker-select" data-id="' + e.id + '">' +
-      '<div class="grow">' + esc(e.name) + '</div></div>';
-  }
-  if (!list.length) h += '<div class="muted" style="padding:10px 0">No matches.</div>';
-  h += '</div>';
-  if (UI.pickerSearch.trim()) {
-    h += '<button class="btn secondary full" data-action="picker-create" style="margin-top:8px">+ Create "' + esc(UI.pickerSearch.trim()) + '"</button>';
-  }
-  openSheet(h);
+  if (!list.length) return '<div class="muted" style="padding:10px 0">No matches — create it below.</div>';
+  return list.map(e =>
+    '<div class="list-item" data-action="picker-select" data-id="' + e.id + '">' +
+    '<div class="grow">' + esc(e.name) + '</div></div>').join('');
+}
+function pickerCreateHTML() {
+  const q = UI.pickerSearch.trim();
+  return q ? '<button class="btn secondary full" data-action="picker-create">+ Create "' + esc(q) + '"</button>' : '';
 }
 
 /* ===================== 10. ROUTER / RENDER ===================== */
@@ -1406,6 +1470,7 @@ const VIEWS = {
   home: viewHome, workout: viewWorkout, workoutExercise: viewWorkoutExercise,
   history: viewHistory, session: viewSession,
   library: viewLibrary, routineEdit: viewRoutineEdit, templateEdit: viewTemplateEdit,
+  templateExercise: viewTemplateExercise,
   exerciseEdit: viewExerciseEdit, settings: viewSettings
 };
 
@@ -1561,7 +1626,13 @@ const actions = {
     if (!upd) return;
     const { r, t } = templateById(upd.routineId, upd.templateId);
     if (r && t) {
-      t.items = upd.items;
+      // keep planned sets for exercises that survive the update
+      const oldPlans = new Map();
+      t.items.forEach(it => { if (it.plan && !oldPlans.has(it.exerciseId)) oldPlans.set(it.exerciseId, it.plan); });
+      t.items = upd.items.map(it => {
+        const plan = oldPlans.get(it.exerciseId);
+        return plan ? Object.assign({}, it, { plan }) : it;
+      });
       r.updatedAt = Date.now();
       saveRoutines();
       toast('Template updated ✓');
@@ -1575,7 +1646,7 @@ const actions = {
     const ex = exerciseById(el.dataset.id);
     if (!ex) return;
     if (pickerContext === 'workout' && DB.active) {
-      const entry = newEntry(ex, 3);
+      const entry = newEntry(ex, null);
       DB.active.entries.push(entry);
       saveActive(); closeSheet();
       if (UI.view === 'workout') navigate('workoutExercise', { entryId: entry.id });
@@ -1635,7 +1706,10 @@ const actions = {
     if (!r || !t) return;
     const copy = {
       id: uid(), name: (t.name || 'Template') + ' copy',
-      items: t.items.map(it => ({ exerciseId: it.exerciseId, targetSets: it.targetSets, ss: !!it.ss }))
+      items: t.items.map(it => ({
+        exerciseId: it.exerciseId, targetSets: it.targetSets, ss: !!it.ss,
+        plan: it.plan ? it.plan.map(p => Object.assign({}, p)) : undefined
+      }))
     };
     r.templates.push(copy); r.updatedAt = Date.now(); saveRoutines();
     navigate('templateEdit', { routineId: r.id, templateId: copy.id });
@@ -1653,6 +1727,26 @@ const actions = {
     const { r, t } = templateById(UI.params.routineId, UI.params.templateId);
     const it = t && t.items[+el.dataset.idx];
     if (it) { it.ss = !it.ss; r.updatedAt = Date.now(); saveRoutines(); render(); }
+  },
+  'edit-template-exercise': el => navigate('templateExercise', {
+    routineId: UI.params.routineId, templateId: UI.params.templateId, idx: +el.dataset.idx
+  }),
+  'plan-add-set': () => {
+    const it = curTplItem();
+    if (!it) return;
+    const plan = ensurePlan(it);
+    const last = plan[plan.length - 1];
+    plan.push({ weight: last ? last.weight : null, unit: last ? last.unit : DB.settings.unit, reps: last ? last.reps : null, warmup: false });
+    syncTargetSets(it); saveRoutines(); render();
+  },
+  'plan-del-set': () => {
+    const it = curTplItem();
+    if (it && it.plan && it.plan.length > 1) { it.plan.pop(); syncTargetSets(it); saveRoutines(); render(); }
+  },
+  'plan-toggle-warmup': el => {
+    const it = curTplItem();
+    const p = it && it.plan && it.plan[+el.dataset.row];
+    if (p) { p.warmup = !p.warmup; saveRoutines(); render(); }
   },
   'routine-add-ex': () => openExercisePicker('routine'),
   'routine-item-up': el => moveRoutineItem(+el.dataset.idx, -1),
@@ -1727,6 +1821,14 @@ const actions = {
   }
 };
 
+function curTplItem() {
+  const { t } = templateById(UI.params.routineId, UI.params.templateId);
+  return (t && t.items[UI.params.idx]) || null;
+}
+function syncTargetSets(it) {
+  if (it.plan) it.targetSets = it.plan.length;
+}
+
 function moveRoutineItem(i, dir) {
   const { r, t } = templateById(UI.params.routineId, UI.params.templateId);
   if (!t) return;
@@ -1737,8 +1839,16 @@ function moveRoutineItem(i, dir) {
 }
 function bumpTargetSets(i, d) {
   const { r, t } = templateById(UI.params.routineId, UI.params.templateId);
-  if (!t || !t.items[i]) return;
-  t.items[i].targetSets = Math.min(10, Math.max(1, t.items[i].targetSets + d));
+  const it = t && t.items[i];
+  if (!it) return;
+  it.targetSets = Math.min(10, Math.max(1, (it.plan ? it.plan.length : it.targetSets) + d));
+  if (it.plan) { // keep the plan in lockstep with the stepper
+    while (it.plan.length < it.targetSets) {
+      const last = it.plan[it.plan.length - 1];
+      it.plan.push({ weight: last ? last.weight : null, unit: last ? last.unit : DB.settings.unit, reps: last ? last.reps : null, warmup: false });
+    }
+    while (it.plan.length > it.targetSets) it.plan.pop();
+  }
   r.updatedAt = Date.now(); saveRoutines(); render();
 }
 
@@ -1778,20 +1888,33 @@ const inputs = {
     if (x) { const v = parseNum(el.value); x.restSec = v == null ? null : Math.round(v); saveExercises(); }
   },
   'ex-notes': (el) => { const x = exerciseById(el.dataset.id); if (x) { x.notes = el.value; saveExercises(); } },
-  'ex-search': (el) => { UI.exSearch = el.value; rerenderPreservingFocus(el, render); },
-  'picker-search': (el) => { UI.pickerSearch = el.value; rerenderPreservingFocus(el, renderPicker); },
+  'ex-search': (el) => {
+    UI.exSearch = el.value;
+    const list = document.getElementById('ex-list');
+    if (list) list.innerHTML = exListHTML();
+  },
+  'picker-search': (el) => {
+    UI.pickerSearch = el.value;
+    const res = document.getElementById('picker-results');
+    const slot = document.getElementById('picker-create-slot');
+    if (res) res.innerHTML = pickerResultsHTML();
+    if (slot) slot.innerHTML = pickerCreateHTML();
+  },
+  'plan-weight': (el) => {
+    const it = curTplItem();
+    const p = it && it.plan && it.plan[+el.dataset.row];
+    if (p) { p.weight = parseNum(el.value); p.unit = DB.settings.unit; saveRoutines(); }
+  },
+  'plan-reps': (el) => {
+    const it = curTplItem();
+    const p = it && it.plan && it.plan[+el.dataset.row];
+    if (p) { const v = parseNum(el.value); p.reps = v == null ? null : Math.round(v); saveRoutines(); }
+  },
   'default-rest': (el) => {
     const v = parseNum(el.value);
     if (v != null && v > 0) { DB.settings.defaultRestSec = Math.round(v); saveSettings(); }
   }
 };
-function rerenderPreservingFocus(el, renderFn) {
-  const key = el.dataset.input;
-  renderFn();
-  const fresh = document.querySelector('[data-input="' + key + '"]');
-  if (fresh) { fresh.focus(); fresh.setSelectionRange(fresh.value.length, fresh.value.length); }
-}
-
 document.body.addEventListener('input', e => {
   const el = e.target.closest('[data-input]');
   if (!el) return;
