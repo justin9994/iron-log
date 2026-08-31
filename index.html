@@ -52,6 +52,7 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; }
+  body { overflow-x: hidden; }
   body {
     background: var(--bg);
     color: var(--text);
@@ -196,6 +197,27 @@
     text-transform: uppercase; letter-spacing: .07em;
   }
   .ss-toggle.active { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .ss-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--accent); color: var(--accent-text);
+    border-radius: 10px; padding: 2px 8px;
+    font-family: var(--font-display); font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .07em; vertical-align: middle;
+  }
+  .ss-pill svg { width: 12px; height: 12px; }
+
+  /* superset advance: old screen slides out left, new one slides in from the right */
+  .slide-ghost {
+    position: fixed; inset: 0; z-index: 15; overflow: hidden; pointer-events: none;
+    background: var(--bg);
+    animation: ghost-out .28s cubic-bezier(.4, 0, .2, 1) forwards;
+  }
+  @keyframes ghost-out { to { transform: translateX(-100%); } }
+  #main.slide-in { animation: main-in .28s cubic-bezier(.4, 0, .2, 1); }
+  @keyframes main-in { from { transform: translateX(100%); } to { transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .slide-ghost, #main.slide-in { animation: none; }
+  }
   .last-hint { font-size: 13px; color: var(--text2); margin-top: 2px; }
   #timerbar {
     position: fixed; left: 0; right: 0; bottom: calc(58px + env(safe-area-inset-bottom)); z-index: 19;
@@ -1075,6 +1097,13 @@ function workoutEntryRow(en) {
 }
 
 // Detail screen: all sets + per-exercise note for one entry (Dropset-style drill-in)
+function inSupersetChain(en) {
+  const ens = DB.active ? DB.active.entries : [];
+  const i = ens.indexOf(en);
+  if (i < 0) return false;
+  return (!!en.ss && i < ens.length - 1) || (i > 0 && !!ens[i - 1].ss);
+}
+
 function viewWorkoutExercise() {
   const s = DB.active;
   const en = s && s.entries.find(x => x.id === UI.params.entryId);
@@ -1082,8 +1111,9 @@ function viewWorkoutExercise() {
   const hint = lastHint(en.exerciseId);
   let h = '<div class="wk-header">' + backBtn() +
     '<div class="grow"><b>' + esc(en.exerciseName) + '</b> ' +
-    '<span class="pill" id="elapsed">' + fmtDur((Date.now() - s.startedAt) / 1000) + '</span></div>' +
-    '<button class="btn sm" data-action="back">Done</button></div>';
+    '<span class="pill" id="elapsed">' + fmtDur((Date.now() - s.startedAt) / 1000) + '</span>' +
+    (inSupersetChain(en) ? ' <span class="ss-pill">' + LINK_ICON + 'Superset</span>' : '') +
+    '</div><button class="btn sm" data-action="back">Done</button></div>';
   if (hint) {
     h += '<div class="banner accent">' + esc(hint) + '</div>';
   }
@@ -1500,6 +1530,30 @@ function render() {
   renderTimerBar();
 }
 
+// Re-render with a horizontal slide (superset auto-advance): a fixed-position snapshot of the
+// old screen slides out left while the freshly rendered #main slides in from the right.
+function slideSwap() {
+  const main = document.getElementById('main');
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    render(); window.scrollTo(0, 0); return;
+  }
+  document.querySelectorAll('.slide-ghost').forEach(g => g.remove());
+  const ghost = document.createElement('div');
+  ghost.className = 'slide-ghost';
+  const snap = main.cloneNode(true);
+  snap.removeAttribute('id');
+  snap.style.cssText = 'padding:16px;max-width:640px;margin:0 auto;transform:translateY(-' + window.scrollY + 'px)';
+  ghost.appendChild(snap);
+  document.body.appendChild(ghost);
+  render();
+  window.scrollTo(0, 0);
+  main.classList.remove('slide-in');
+  void main.offsetWidth; // restart the animation
+  main.classList.add('slide-in');
+  ghost.addEventListener('animationend', () => ghost.remove());
+  setTimeout(() => { ghost.remove(); main.classList.remove('slide-in'); }, 450);
+}
+
 /* ===================== 11. EVENTS ===================== */
 
 function confirmStart(r, t) {
@@ -1599,10 +1653,10 @@ const actions = {
     saveActive();
     if (set.done) {
       startTimer(restSecFor(entry));
-      // superset: jump to the next linked exercise
+      // superset: slide to the next linked exercise
       if (UI.view === 'workoutExercise') {
         const next = nextInSuperset(entry);
-        if (next) { UI.params = { entryId: next.id }; toast('Superset → ' + next.exerciseName); }
+        if (next) { UI.params = { entryId: next.id }; slideSwap(); return; }
       }
     }
     render();
