@@ -180,6 +180,17 @@
   }
   .set-row.done .donebtn { background: var(--green); border-color: var(--green); color: #fff; }
   .set-row.done input.num { opacity: .6; }
+  /* ---- rep wheel: drag up/down on the reps field to nudge by 1, tap to type ---- */
+  .repwheel { display: block; touch-action: none; }
+  .repwheel .rw-col { display: flex; flex-direction: column; }
+  .repwheel .rw-col.snap { transition: transform .15s ease; }
+  .repwheel .rw-ghost {
+    height: 15px; line-height: 15px; text-align: center; pointer-events: none;
+    font-family: var(--font-display); font-size: 13px; font-weight: 600; color: var(--text2); opacity: .45;
+    font-variant-numeric: tabular-nums; user-select: none; -webkit-user-select: none;
+  }
+  .repwheel.dragging input.num { border-color: var(--accent); }
+  .set-row.done .rw-ghost { opacity: .25; }
   .checkdot {
     width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
@@ -510,6 +521,7 @@ function newEntry(exercise, item) {
   if (last) {
     entry.sets = last.entry.sets.filter(s => s.done).map(s => newSet(s));
     entry.note = last.entry.note || ''; // notes are persistent cues (form, RPE targets) — carry forward editable
+    entry.noteAt = entry.note ? (last.entry.noteAt || null) : null; // when the cue was last edited (date shown under the note)
   }
   if (entry.sets.length === 0 && item && item.plan && item.plan.length) {
     entry.sets = item.plan.map(p => ({
@@ -1100,6 +1112,11 @@ function workoutEntryRow(en) {
     '<span class="muted">›</span></div>';
 }
 
+// "Updated Aug 12" under the note — blank when there's no note or it predates noteAt tracking.
+function noteMeta(en) {
+  return en.note && en.noteAt ? 'Updated ' + fmtDateKey(dateKeyOf(en.noteAt)) : '';
+}
+
 // Detail screen: all sets + per-exercise note for one entry (Dropset-style drill-in)
 function inSupersetChain(en) {
   const ens = DB.active ? DB.active.entries : [];
@@ -1127,9 +1144,21 @@ function viewWorkoutExercise() {
     (en.sets.length ? '<button class="btn ghost sm" style="color:var(--red)" data-action="del-set" data-entry="' + en.id + '">− Remove set</button>' : '') +
     '</div></div>';
   h += '<label class="field" style="margin-top:14px">Exercise note <span style="font-weight:400;text-transform:none;letter-spacing:0">(carries over to every session until you change it)</span>' +
-    '<textarea data-input="entry-note" data-entry="' + en.id + '" rows="2" placeholder="e.g. form cues, RPE target…">' + esc(en.note) + '</textarea></label>';
+    '<textarea data-input="entry-note" data-entry="' + en.id + '" rows="2" placeholder="e.g. form cues, RPE target…">' + esc(en.note) + '</textarea>' +
+    '<div class="muted small" id="note-meta" style="margin-top:4px;font-weight:400;text-transform:none;letter-spacing:0">' + noteMeta(en) + '</div></label>';
   h += '<button class="btn ghost full" style="color:var(--red);margin-top:8px" data-action="del-entry" data-entry="' + en.id + '">Remove from this workout</button>';
   return h;
+}
+
+// Reps field wrapped in a mini drum: faded prev/next values above and below the input.
+// Drag behaviour lives in section 10 (repwheel pointer handlers); attrs carries data-input etc.
+function repWheel(reps, attrs) {
+  const n = reps == null ? null : Math.max(0, Math.round(reps));
+  return '<div class="repwheel"><div class="rw-col">' +
+    '<div class="rw-ghost">' + (n != null && n > 1 ? n - 1 : '') + '</div>' +
+    '<input class="num" type="text" inputmode="numeric" placeholder="reps" value="' + (n == null ? '' : n) + '" ' + attrs + '>' +
+    '<div class="rw-ghost">' + ((n || 0) + 1) + '</div>' +
+    '</div></div>';
 }
 
 function setsGrid(en) {
@@ -1141,7 +1170,7 @@ function setsGrid(en) {
       (set.warmup ? 'W' : (i + 1)) + '</button>' +
       '<span class="wcell"><input class="num" type="text" inputmode="decimal" placeholder="' + u + '" value="' + esc(displayWeight(set)) + '" data-input="set-weight" data-entry="' + en.id + '" data-set="' + set.id + '"></span>' +
       '<span class="x">×</span>' +
-      '<span class="rcell"><input class="num" type="text" inputmode="numeric" placeholder="reps" value="' + (set.reps == null ? '' : set.reps) + '" data-input="set-reps" data-entry="' + en.id + '" data-set="' + set.id + '"></span>' +
+      '<span class="rcell">' + repWheel(set.reps, 'data-input="set-reps" data-entry="' + en.id + '" data-set="' + set.id + '"') + '</span>' +
       '<button class="donebtn" data-action="toggle-done" data-entry="' + en.id + '" data-set="' + set.id + '">✓</button>' +
       '</div>';
   });
@@ -1239,7 +1268,8 @@ function viewSession() {
           (set.warmup ? 'W' : (i + 1)) + '</span><span>' + w + ' ' + u + ' × ' + (set.reps || 0) + '</span></div>';
       }).join('') + '</div>';
     }
-    if (en.note) h += '<div class="muted small" style="margin-top:6px">✎ ' + esc(en.note) + '</div>';
+    if (en.note) h += '<div class="muted small" style="margin-top:6px">✎ ' + esc(en.note) +
+      (en.noteAt ? ' <span style="opacity:.7">· updated ' + fmtDateKey(dateKeyOf(en.noteAt)) + '</span>' : '') + '</div>';
     h += '</div>';
   }
   if (s.notes) h += '<div class="card"><div class="muted small">Note</div>' + esc(s.notes) + '</div>';
@@ -1361,7 +1391,7 @@ function viewTemplateExercise() {
       (p.warmup ? 'W' : (i + 1)) + '</button>' +
       '<span class="wcell"><input class="num" type="text" inputmode="decimal" placeholder="' + u + '" value="' + esc(displayWeight(p)) + '" data-input="plan-weight" data-row="' + i + '"></span>' +
       '<span class="x">×</span>' +
-      '<span class="rcell"><input class="num" type="text" inputmode="numeric" placeholder="reps" value="' + (p.reps == null ? '' : p.reps) + '" data-input="plan-reps" data-row="' + i + '"></span>' +
+      '<span class="rcell">' + repWheel(p.reps, 'data-input="plan-reps" data-row="' + i + '"') + '</span>' +
       '</div>';
   });
   h += '</div><div class="row" style="margin-top:10px">' +
@@ -1569,7 +1599,7 @@ document.addEventListener('touchstart', e => {
   swipeStart = null;
   if (ROOT_VIEWS.includes(UI.view)) return;
   if (document.getElementById('sheetwrap').classList.contains('open')) return;
-  if (e.target.closest('input, textarea, select')) return;
+  if (e.target.closest('input, textarea, select, .repwheel')) return;
   swipeStart = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
 }, { passive: true });
 document.addEventListener('touchmove', e => {
@@ -1587,6 +1617,86 @@ document.addEventListener('touchend', e => {
   if (dx > 70 && Math.abs(dy) < dx * 0.6 && dt < 600) backWithSlide();
 }, { passive: true });
 document.addEventListener('touchcancel', () => { swipeStart = null; }, { passive: true });
+
+// Rep wheel: a vertical drag on a reps field nudges it one rep per WHEEL_STEP px (drag up = more),
+// a plain tap still focuses the input for the keypad. The drag only writes input.value and fires
+// 'input', so the set-reps / plan-reps handlers stay the single source of truth.
+const WHEEL_STEP = 20;
+let wheel = null, wheelClickBlockUntil = 0;
+function wheelRefresh(wrap) {
+  const input = wrap.querySelector('input');
+  const v = parseNum(input.value);
+  const n = v == null ? null : Math.max(0, Math.round(v));
+  const g = wrap.querySelectorAll('.rw-ghost');
+  if (g.length < 2) return;
+  g[0].textContent = n != null && n > 1 ? n - 1 : '';
+  g[1].textContent = (n || 0) + 1;
+}
+document.addEventListener('pointerdown', e => {
+  const wrap = e.target.closest('.repwheel');
+  if (!wrap || wheel) return;
+  const input = wrap.querySelector('input');
+  const v = parseNum(input.value);
+  wheel = { wrap, input, id: e.pointerId, y: e.clientY, start: v == null ? 0 : Math.round(v), dragging: false };
+});
+document.addEventListener('pointermove', e => {
+  if (!wheel || e.pointerId !== wheel.id) return;
+  const dy = wheel.y - e.clientY; // finger up = positive = more reps
+  if (!wheel.dragging) {
+    if (Math.abs(dy) < 6) return;
+    wheel.dragging = true;
+    wheel.wrap.classList.add('dragging');
+    try { wheel.wrap.setPointerCapture(e.pointerId); } catch (_) {}
+    if (document.activeElement === wheel.input) wheel.input.blur(); // dragging, not typing — drop the keyboard
+  }
+  e.preventDefault();
+  const steps = Math.round(dy / WHEEL_STEP);
+  const val = Math.max(0, wheel.start + steps);
+  const col = wheel.wrap.querySelector('.rw-col');
+  col.classList.remove('snap');
+  col.style.transform = 'translateY(' + (-(dy - steps * WHEEL_STEP)) + 'px)';
+  const next = val === 0 ? '' : String(val);
+  if (next !== wheel.input.value) {
+    wheel.input.value = next;
+    wheel.input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+});
+function wheelEnd(e) {
+  if (!wheel || e.pointerId !== wheel.id) return;
+  const w = wheel; wheel = null;
+  if (!w.dragging) return;
+  const col = w.wrap.querySelector('.rw-col');
+  col.classList.add('snap'); col.style.transform = '';
+  w.wrap.classList.remove('dragging');
+  wheelClickBlockUntil = Date.now() + 400; // swallow the click some browsers fire after a drag
+}
+document.addEventListener('pointerup', wheelEnd);
+document.addEventListener('pointercancel', wheelEnd);
+document.addEventListener('click', e => {
+  if (Date.now() < wheelClickBlockUntil && e.target.closest('.repwheel')) {
+    e.preventDefault(); e.stopPropagation();
+    if (document.activeElement && document.activeElement.closest('.repwheel')) document.activeElement.blur();
+  }
+}, true);
+
+// Numeric fields: caret goes to the end when a field is first tapped (iOS drops it wherever the
+// finger landed, which makes deleting the last digit a chore). Later taps position normally.
+function caretToEnd(el) { const n = el.value.length; try { el.setSelectionRange(n, n); } catch (_) {} }
+function isNumField(el) {
+  return el instanceof HTMLInputElement && el.type === 'text' &&
+    (el.classList.contains('num') || /numeric|decimal/.test(el.getAttribute('inputmode') || ''));
+}
+document.addEventListener('focusin', e => {
+  const el = e.target;
+  if (!isNumField(el)) return;
+  el._focusAt = Date.now();
+  caretToEnd(el);
+  setTimeout(() => { if (document.activeElement === el) caretToEnd(el); }, 0);
+});
+document.addEventListener('click', e => {
+  const el = e.target;
+  if (isNumField(el) && el._focusAt && Date.now() - el._focusAt < 400) caretToEnd(el);
+}, true);
 
 /* ===================== 11. EVENTS ===================== */
 
@@ -1960,7 +2070,10 @@ const inputs = {
   'workout-note': (el) => { if (DB.active) { DB.active.notes = el.value; saveActive(); } },
   'entry-note': (el) => {
     const en = DB.active && DB.active.entries.find(x => x.id === el.dataset.entry);
-    if (en) { en.note = el.value; saveActive(); }
+    if (!en) return;
+    en.note = el.value; en.noteAt = el.value ? Date.now() : null; saveActive();
+    const meta = document.getElementById('note-meta');
+    if (meta) meta.textContent = noteMeta(en);
   },
   'routine-name': (el) => {
     const r = routineById(el.dataset.id);
@@ -2008,6 +2121,8 @@ document.body.addEventListener('input', e => {
   if (!el) return;
   const fn = inputs[el.dataset.input];
   if (fn) fn(el);
+  const wrap = el.closest('.repwheel');
+  if (wrap) wheelRefresh(wrap);
 });
 
 document.body.addEventListener('change', e => {
