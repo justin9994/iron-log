@@ -214,6 +214,54 @@
     border: 1.5px solid var(--border);
   }
   .checkdot.complete { background: var(--green); border-color: var(--green); color: #fff; }
+  /* ---- exercise screen: Dropset-like hierarchy — title, roomy pill rows, divider, plain note ---- */
+  .xs-top { display: flex; align-items: center; gap: 10px; margin: -4px 0 8px; }
+  .xs-title { margin: 4px 0 6px; font-size: 34px; line-height: 1.05; }
+  .xs-title .ss-pill { vertical-align: middle; margin-left: 8px; position: relative; top: -4px; letter-spacing: .07em; }
+  .xs-sub { margin-bottom: 28px; }
+  .xs-sets { display: flex; flex-direction: column; gap: 20px; }
+  .xs-row { display: flex; align-items: center; gap: 10px; }
+  .xs-check {
+    width: 48px; height: 48px; border-radius: 12px; border: 1.5px solid var(--border); flex-shrink: 0;
+    background: var(--surface2); color: transparent; font-size: 22px; cursor: pointer;
+  }
+  .xs-row.done .xs-check { background: var(--green); border-color: var(--green); color: #fff; }
+  .xs-pill {
+    flex: 1; min-width: 0; height: 48px; border-radius: 24px; border: 1.5px solid var(--border);
+    background: transparent; display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-size: 21px; font-weight: 600; color: var(--text);
+    font-variant-numeric: tabular-nums; padding: 0 12px; position: relative;
+  }
+  button.xs-pill { cursor: pointer; }
+  .xs-pill.empty { color: var(--text2); font-weight: 500; }
+  .xs-w input {
+    width: 100%; height: 100%; background: none; border: none; padding: 0 28px 0 8px; border-radius: 24px;
+    text-align: center; font: inherit; color: inherit; font-variant-numeric: tabular-nums;
+  }
+  .xs-w input:focus { outline: none; }
+  .xs-w:focus-within { border-color: var(--accent); }
+  .xs-w .unit { position: absolute; right: 13px; top: 50%; transform: translateY(-50%); font-size: 14px; font-weight: 500; color: var(--text2); pointer-events: none; }
+  .xs-row.done .xs-pill { opacity: .55; }
+  .xs-num {
+    width: 30px; height: 30px; border-radius: 50%; border: none; flex-shrink: 0;
+    background: var(--surface2); color: var(--text2); font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit;
+  }
+  .xs-num.warmup { background: color-mix(in srgb, var(--amber) 22%, var(--surface2)); color: var(--amber); }
+  .xs-addrow { display: flex; align-items: center; gap: 14px; margin-top: 24px; }
+  .xs-add {
+    width: 48px; height: 48px; border-radius: 50%; border: 1.5px solid var(--border); flex-shrink: 0;
+    background: transparent; color: var(--text); font-size: 26px; line-height: 1; cursor: pointer;
+  }
+  .xs-addrow .lbl { flex: 1; font-weight: 600; font-size: 17px; cursor: pointer; }
+  .xs-hint { margin-top: 22px; }
+  .xs-divider { border-top: 1px solid var(--border); margin: 28px -16px 22px; }
+  .xs-note {
+    display: block; width: 100%; background: none; border: none; padding: 0; border-radius: 0;
+    font-size: 16px; line-height: 1.7; color: var(--text); resize: none; min-height: 54px; overflow: hidden;
+  }
+  .xs-note:focus { outline: none; }
+  .xs-note::placeholder { color: var(--text2); }
+
   /* exercise lists (live workout + template editor): hold-to-drag reorder, link icon between rows */
   .ex-list { margin-bottom: 4px; }
   .ex-item { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
@@ -419,7 +467,7 @@ function saveKey(key, val) {
 }
 
 const SCHEMA_VERSION = 2;
-const APP_VERSION = '3.9'; // bump on every deploy — shown in Settings so a stale phone cache is obvious
+const APP_VERSION = '4.0'; // bump on every deploy — shown in Settings so a stale phone cache is obvious
 
 /* ===================== 3. STATE + STORE ===================== */
 
@@ -1141,7 +1189,7 @@ function workoutEntryRow(en) {
 
 // "Updated Aug 12" under the note — blank when there's no note or it predates noteAt tracking.
 function noteMeta(en) {
-  return en.note && en.noteAt ? 'Updated ' + fmtDateKey(dateKeyOf(en.noteAt)) : '';
+  return en.note && en.noteAt ? 'Note updated ' + fmtDateKey(dateKeyOf(en.noteAt)) : '';
 }
 
 // Detail screen: all sets + per-exercise note for one entry (Dropset-style drill-in)
@@ -1157,44 +1205,49 @@ function viewWorkoutExercise() {
   const en = s && s.entries.find(x => x.id === UI.params.entryId);
   if (!en) return '<div class="empty-state">Exercise not found.</div>';
   const hint = lastHint(en.exerciseId);
-  let h = '<div class="wk-header">' + backBtn() +
-    '<div class="grow"><b>' + esc(en.exerciseName) + '</b> ' +
+  let h = '<div class="xs-top">' + backBtn() + '<div class="grow"></div>' +
     '<span class="pill" id="elapsed">' + fmtDur((Date.now() - s.startedAt) / 1000) + '</span>' +
-    (inSupersetChain(en) ? ' <span class="ss-pill">' + LINK_ICON + 'Superset</span>' : '') +
-    '</div><button class="btn sm" data-action="back">Done</button></div>';
-  h += '<div class="card">' + setsGrid(en) +
-    '<div class="row" style="margin-top:10px">' +
-    '<button class="btn ghost sm" data-action="add-set" data-entry="' + en.id + '">+ Add set</button>' +
-    (en.sets.length ? '<button class="btn ghost sm" style="color:var(--red)" data-action="del-set" data-entry="' + en.id + '">− Remove set</button>' : '') +
-    '</div>' +
-    (hint ? '<div class="muted small" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">' + esc(hint) + '</div>' : '') +
+    '<button class="btn sm" data-action="back">Done</button></div>';
+  h += '<h1 class="xs-title">' + esc(en.exerciseName) +
+    (inSupersetChain(en) ? '<span class="ss-pill">' + LINK_ICON + 'Superset</span>' : '') + '</h1>';
+  h += '<p class="muted xs-sub">Check off each set as you finish it.</p>';
+  h += setsGrid(en);
+  h += '<div class="xs-addrow">' +
+    '<button class="xs-add" data-action="add-set" data-entry="' + en.id + '" aria-label="Add set">+</button>' +
+    '<span class="lbl" data-action="add-set" data-entry="' + en.id + '">Add set</span>' +
+    (en.sets.length ? '<button class="btn ghost sm" style="color:var(--text2)" data-action="del-set" data-entry="' + en.id + '">Remove set</button>' : '') +
     '</div>';
-  h += '<label class="field" style="margin-top:14px">Exercise note <span style="font-weight:400;text-transform:none;letter-spacing:0">(carries over to every session until you change it)</span>' +
-    '<textarea data-input="entry-note" data-entry="' + en.id + '" rows="2" placeholder="e.g. form cues, RPE target…">' + esc(en.note) + '</textarea>' +
-    '<div class="muted small" id="note-meta" style="margin-top:4px;font-weight:400;text-transform:none;letter-spacing:0">' + noteMeta(en) + '</div></label>';
-  h += '<button class="btn ghost full" style="color:var(--red);margin-top:8px" data-action="del-entry" data-entry="' + en.id + '">Remove from this workout</button>';
+  if (hint) h += '<div class="muted small xs-hint">' + esc(hint) + '</div>';
+  h += '<div class="xs-divider"></div>';
+  h += '<textarea class="xs-note" data-input="entry-note" data-autosize data-entry="' + en.id + '" rows="1" ' +
+    'placeholder="Add a note — form cues, targets… it carries over to every session">' + esc(en.note) + '</textarea>';
+  h += '<div class="muted small" id="note-meta" style="margin-top:10px">' + noteMeta(en) + '</div>';
+  h += '<button class="btn ghost full" style="color:var(--red);margin-top:32px" data-action="del-entry" data-entry="' + en.id + '">Remove from this workout</button>';
   return h;
 }
 
 // Reps cell: a button showing the value; tapping opens the rep editor sheet (openRepEditor).
 // attrs carries the data-* the rep-edit action needs to find its target.
-function repBtn(reps, attrs) {
+function repLabel(n) { return n == null || n === 0 ? 'reps' : n + ' reps'; }
+function repBtn(reps, attrs, cls) {
   const n = reps == null ? null : Math.max(0, Math.round(reps));
-  return '<button class="num repbtn' + (n == null ? ' empty' : '') + '" data-action="rep-edit" ' + attrs + '>' +
-    (n == null ? 'reps' : n) + '</button>';
+  return '<button class="' + (cls || 'num') + ' repbtn' + (n == null ? ' empty' : '') + '" data-action="rep-edit" ' + attrs + '>' +
+    repLabel(n) + '</button>';
 }
 
+// Exercise-screen set rows: [check] [weight pill] [reps pill] [set # / warm-up]
 function setsGrid(en) {
   const u = DB.settings.unit;
-  let h = '<div class="set-grid">';
+  let h = '<div class="xs-sets">';
   en.sets.forEach((set, i) => {
-    h += '<div class="set-row ' + (set.done ? 'done' : '') + '">' +
-      '<button class="set-num ' + (set.warmup ? 'warmup' : '') + '" data-action="toggle-warmup" data-entry="' + en.id + '" data-set="' + set.id + '" title="Toggle warm-up">' +
+    const ids = 'data-entry="' + en.id + '" data-set="' + set.id + '"';
+    h += '<div class="xs-row' + (set.done ? ' done' : '') + '">' +
+      '<button class="xs-check" data-action="toggle-done" ' + ids + ' aria-label="Set done">✓</button>' +
+      '<span class="xs-pill xs-w"><input class="num" type="text" inputmode="decimal" value="' + esc(displayWeight(set)) + '" data-input="set-weight" ' + ids + ' aria-label="Weight">' +
+      '<span class="unit">' + u + '</span></span>' +
+      repBtn(set.reps, 'data-kind="set" ' + ids, 'xs-pill') +
+      '<button class="xs-num' + (set.warmup ? ' warmup' : '') + '" data-action="toggle-warmup" ' + ids + ' title="Toggle warm-up">' +
       (set.warmup ? 'W' : (i + 1)) + '</button>' +
-      '<span class="wcell"><input class="num" type="text" inputmode="decimal" placeholder="' + u + '" value="' + esc(displayWeight(set)) + '" data-input="set-weight" data-entry="' + en.id + '" data-set="' + set.id + '"></span>' +
-      '<span class="x">×</span>' +
-      '<span class="rcell">' + repBtn(set.reps, 'data-kind="set" data-entry="' + en.id + '" data-set="' + set.id + '"') + '</span>' +
-      '<button class="donebtn" data-action="toggle-done" data-entry="' + en.id + '" data-set="' + set.id + '">✓</button>' +
       '</div>';
   });
   return h + '</div>';
@@ -1568,9 +1621,11 @@ function back() {
   render();
   window.scrollTo(0, 0);
 }
+function autosize(ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
 function render() {
   const fn = VIEWS[UI.view] || viewHome;
   document.getElementById('main').innerHTML = fn();
+  document.querySelectorAll('textarea[data-autosize]').forEach(autosize);
   renderTabBar();
   renderTimerBar();
 }
@@ -1669,7 +1724,7 @@ function reSet(v, fromKeypad) {
   reDraw();
   re.onChange(re.val === 0 ? null : re.val);
   if (re.btn) { // keep the row behind the sheet in sync
-    re.btn.textContent = re.val === 0 ? 'reps' : re.val;
+    re.btn.textContent = repLabel(re.val);
     re.btn.classList.toggle('empty', re.val === 0);
   }
 }
@@ -2208,6 +2263,7 @@ const inputs = {
     const en = DB.active && DB.active.entries.find(x => x.id === el.dataset.entry);
     if (!en) return;
     en.note = el.value; en.noteAt = el.value ? Date.now() : null; saveActive();
+    if (el.dataset.autosize != null) autosize(el);
     const meta = document.getElementById('note-meta');
     if (meta) meta.textContent = noteMeta(en);
   },
