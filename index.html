@@ -160,7 +160,7 @@
   }
   .set-grid { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
   .set-row { display: flex; align-items: center; gap: 8px; }
-  .set-row input.num {
+  .set-row .num {
     width: 100%; text-align: center; padding: 10px 4px;
     font-family: var(--font-display); font-size: 20px; font-weight: 600;
     background: var(--surface2); border: 1px solid var(--border); border-radius: 9px;
@@ -179,18 +179,34 @@
     background: var(--surface); color: transparent; font-size: 18px; cursor: pointer; flex-shrink: 0;
   }
   .set-row.done .donebtn { background: var(--green); border-color: var(--green); color: #fff; }
-  .set-row.done input.num { opacity: .6; }
-  /* ---- rep wheel: drag up/down on the reps field to nudge by 1, tap to type ---- */
-  .repwheel { display: block; touch-action: none; }
-  .repwheel .rw-col { display: flex; flex-direction: column; }
-  .repwheel .rw-col.snap { transition: transform .15s ease; }
-  .repwheel .rw-ghost {
-    height: 15px; line-height: 15px; text-align: center; pointer-events: none;
-    font-family: var(--font-display); font-size: 13px; font-weight: 600; color: var(--text2); opacity: .45;
-    font-variant-numeric: tabular-nums; user-select: none; -webkit-user-select: none;
+  .set-row.done .num { opacity: .6; }
+  .set-row button.num { cursor: pointer; line-height: normal; display: block; }
+  .set-row button.num.empty { color: var(--text2); font-weight: 500; }
+
+  /* ---- rep editor sheet (Dropset-style): drum + stepper + in-app keypad ---- */
+  .re-top { display: flex; align-items: center; gap: 8px; margin: 4px 0 10px; }
+  .re-step {
+    width: 56px; height: 56px; border-radius: 50%; border: none; flex-shrink: 0;
+    background: var(--surface2); color: var(--text); font-size: 30px; font-weight: 500;
+    cursor: pointer; font-family: inherit; line-height: 1;
   }
-  .repwheel.dragging input.num { border-color: var(--accent); }
-  .set-row.done .rw-ghost { opacity: .25; }
+  .re-drum {
+    flex: 1; height: 136px; overflow: hidden; position: relative; touch-action: none;
+    user-select: none; -webkit-user-select: none; cursor: ns-resize;
+  }
+  .re-col { position: absolute; left: 0; right: 0; top: 0; display: flex; flex-direction: column; }
+  .re-col.snap { transition: transform .15s ease; }
+  .re-ghost, .re-val { text-align: center; font-family: var(--font-display); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .re-ghost { height: 34px; line-height: 34px; font-size: 24px; color: var(--text2); opacity: .4; }
+  .re-val { height: 68px; line-height: 68px; font-size: 60px; color: var(--text); }
+  .re-drum.dragging .re-val { color: var(--accent); }
+  .re-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+  .re-pad button {
+    height: 52px; border: none; border-radius: 10px; background: var(--surface2); color: var(--text);
+    font-family: var(--font-display); font-size: 26px; font-weight: 600; cursor: pointer;
+  }
+  .re-pad button:active { background: var(--border); }
+  .re-pad button.blank { background: none; pointer-events: none; }
   .checkdot {
     width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
@@ -1150,15 +1166,12 @@ function viewWorkoutExercise() {
   return h;
 }
 
-// Reps field wrapped in a mini drum: faded prev/next values above and below the input.
-// Drag behaviour lives in section 10 (repwheel pointer handlers); attrs carries data-input etc.
-function repWheel(reps, attrs) {
+// Reps cell: a button showing the value; tapping opens the rep editor sheet (openRepEditor).
+// attrs carries the data-* the rep-edit action needs to find its target.
+function repBtn(reps, attrs) {
   const n = reps == null ? null : Math.max(0, Math.round(reps));
-  return '<div class="repwheel"><div class="rw-col">' +
-    '<div class="rw-ghost">' + (n != null && n > 1 ? n - 1 : '') + '</div>' +
-    '<input class="num" type="text" inputmode="numeric" placeholder="reps" value="' + (n == null ? '' : n) + '" ' + attrs + '>' +
-    '<div class="rw-ghost">' + ((n || 0) + 1) + '</div>' +
-    '</div></div>';
+  return '<button class="num repbtn' + (n == null ? ' empty' : '') + '" data-action="rep-edit" ' + attrs + '>' +
+    (n == null ? 'reps' : n) + '</button>';
 }
 
 function setsGrid(en) {
@@ -1170,7 +1183,7 @@ function setsGrid(en) {
       (set.warmup ? 'W' : (i + 1)) + '</button>' +
       '<span class="wcell"><input class="num" type="text" inputmode="decimal" placeholder="' + u + '" value="' + esc(displayWeight(set)) + '" data-input="set-weight" data-entry="' + en.id + '" data-set="' + set.id + '"></span>' +
       '<span class="x">×</span>' +
-      '<span class="rcell">' + repWheel(set.reps, 'data-input="set-reps" data-entry="' + en.id + '" data-set="' + set.id + '"') + '</span>' +
+      '<span class="rcell">' + repBtn(set.reps, 'data-kind="set" data-entry="' + en.id + '" data-set="' + set.id + '"') + '</span>' +
       '<button class="donebtn" data-action="toggle-done" data-entry="' + en.id + '" data-set="' + set.id + '">✓</button>' +
       '</div>';
   });
@@ -1391,7 +1404,7 @@ function viewTemplateExercise() {
       (p.warmup ? 'W' : (i + 1)) + '</button>' +
       '<span class="wcell"><input class="num" type="text" inputmode="decimal" placeholder="' + u + '" value="' + esc(displayWeight(p)) + '" data-input="plan-weight" data-row="' + i + '"></span>' +
       '<span class="x">×</span>' +
-      '<span class="rcell">' + repWheel(p.reps, 'data-input="plan-reps" data-row="' + i + '"') + '</span>' +
+      '<span class="rcell">' + repBtn(p.reps, 'data-kind="plan" data-row="' + i + '"') + '</span>' +
       '</div>';
   });
   h += '</div><div class="row" style="margin-top:10px">' +
@@ -1599,7 +1612,7 @@ document.addEventListener('touchstart', e => {
   swipeStart = null;
   if (ROOT_VIEWS.includes(UI.view)) return;
   if (document.getElementById('sheetwrap').classList.contains('open')) return;
-  if (e.target.closest('input, textarea, select, .repwheel')) return;
+  if (e.target.closest('input, textarea, select')) return;
   swipeStart = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
 }, { passive: true });
 document.addEventListener('touchmove', e => {
@@ -1618,66 +1631,80 @@ document.addEventListener('touchend', e => {
 }, { passive: true });
 document.addEventListener('touchcancel', () => { swipeStart = null; }, { passive: true });
 
-// Rep wheel: a vertical drag on a reps field nudges it one rep per WHEEL_STEP px (drag up = more),
-// a plain tap still focuses the input for the keypad. The drag only writes input.value and fires
-// 'input', so the set-reps / plan-reps handlers stay the single source of truth.
-const WHEEL_STEP = 20;
-let wheel = null, wheelClickBlockUntil = 0;
-function wheelRefresh(wrap) {
-  const input = wrap.querySelector('input');
-  const v = parseNum(input.value);
-  const n = v == null ? null : Math.max(0, Math.round(v));
-  const g = wrap.querySelectorAll('.rw-ghost');
-  if (g.length < 2) return;
-  g[0].textContent = n != null && n > 1 ? n - 1 : '';
-  g[1].textContent = (n || 0) + 1;
+// Rep editor sheet (Dropset-style): big number you can drag up/down (one rep per RE_STEP px),
+// − / + steppers, and an in-app keypad so the system keyboard never opens. The first digit typed
+// replaces the current value; ⌫ and the steppers edit it in place. onChange(v|null) writes state
+// (set-reps / plan-reps), and the row re-renders when the sheet closes.
+const RE_STEP = 28;
+let re = null; // { val, fresh, onChange, btn }
+function repEditorHTML(v) {
+  return '<div class="re-top">' +
+    '<button class="re-step" data-action="re-dec" aria-label="Fewer reps">−</button>' +
+    '<div class="re-drum" id="re-drum"><div class="re-col" id="re-col">' +
+    '<div class="re-ghost" id="re-prev"></div><div class="re-val" id="re-val"></div><div class="re-ghost" id="re-next"></div>' +
+    '</div></div>' +
+    '<button class="re-step" data-action="re-inc" aria-label="More reps">+</button></div>' +
+    '<div class="re-pad">' +
+    [1, 2, 3, 4, 5, 6, 7, 8, 9].map(d => '<button data-action="re-key" data-key="' + d + '">' + d + '</button>').join('') +
+    '<button class="blank" tabindex="-1"></button>' +
+    '<button data-action="re-key" data-key="0">0</button>' +
+    '<button data-action="re-key" data-key="del" aria-label="Delete">⌫</button></div>' +
+    '<button class="btn full" data-action="sheet-close">Done</button>';
 }
+function openRepEditor(initial, onChange, btn) {
+  re = { val: initial == null ? 0 : Math.max(0, Math.round(initial)), fresh: true, onChange, btn };
+  openSheet(repEditorHTML(), () => { re = null; render(); });
+  reDraw();
+}
+function reDraw() {
+  if (!re) return;
+  const v = re.val;
+  document.getElementById('re-prev').textContent = v > 0 ? v - 1 : '';
+  document.getElementById('re-val').textContent = v;
+  document.getElementById('re-next').textContent = v + 1;
+}
+function reSet(v, fromKeypad) {
+  if (!re) return;
+  re.val = Math.min(999, Math.max(0, v));
+  if (!fromKeypad) re.fresh = false;
+  reDraw();
+  re.onChange(re.val === 0 ? null : re.val);
+  if (re.btn) { // keep the row behind the sheet in sync
+    re.btn.textContent = re.val === 0 ? 'reps' : re.val;
+    re.btn.classList.toggle('empty', re.val === 0);
+  }
+}
+let reDrag = null;
 document.addEventListener('pointerdown', e => {
-  const wrap = e.target.closest('.repwheel');
-  if (!wrap || wheel) return;
-  const input = wrap.querySelector('input');
-  const v = parseNum(input.value);
-  wheel = { wrap, input, id: e.pointerId, y: e.clientY, start: v == null ? 0 : Math.round(v), dragging: false };
+  const drum = e.target.closest('#re-drum');
+  if (!drum || !re || reDrag) return;
+  reDrag = { id: e.pointerId, y: e.clientY, start: re.val, dragging: false, drum };
 });
 document.addEventListener('pointermove', e => {
-  if (!wheel || e.pointerId !== wheel.id) return;
-  const dy = wheel.y - e.clientY; // finger up = positive = more reps
-  if (!wheel.dragging) {
-    if (Math.abs(dy) < 6) return;
-    wheel.dragging = true;
-    wheel.wrap.classList.add('dragging');
-    try { wheel.wrap.setPointerCapture(e.pointerId); } catch (_) {}
-    if (document.activeElement === wheel.input) wheel.input.blur(); // dragging, not typing — drop the keyboard
+  if (!reDrag || e.pointerId !== reDrag.id) return;
+  const dy = reDrag.y - e.clientY; // finger up = more reps
+  if (!reDrag.dragging) {
+    if (Math.abs(dy) < 10) return;
+    reDrag.dragging = true;
+    reDrag.drum.classList.add('dragging');
+    try { reDrag.drum.setPointerCapture(e.pointerId); } catch (_) {}
   }
   e.preventDefault();
-  const steps = Math.round(dy / WHEEL_STEP);
-  const val = Math.max(0, wheel.start + steps);
-  const col = wheel.wrap.querySelector('.rw-col');
-  col.classList.remove('snap');
-  col.style.transform = 'translateY(' + (-(dy - steps * WHEEL_STEP)) + 'px)';
-  const next = val === 0 ? '' : String(val);
-  if (next !== wheel.input.value) {
-    wheel.input.value = next;
-    wheel.input.dispatchEvent(new Event('input', { bubbles: true }));
-  }
+  const steps = Math.round(dy / RE_STEP);
+  const col = document.getElementById('re-col');
+  if (col) { col.classList.remove('snap'); col.style.transform = 'translateY(' + (-(dy - steps * RE_STEP)) + 'px)'; }
+  const v = Math.max(0, reDrag.start + steps);
+  if (re && v !== re.val) reSet(v, false);
 });
-function wheelEnd(e) {
-  if (!wheel || e.pointerId !== wheel.id) return;
-  const w = wheel; wheel = null;
-  if (!w.dragging) return;
-  const col = w.wrap.querySelector('.rw-col');
-  col.classList.add('snap'); col.style.transform = '';
-  w.wrap.classList.remove('dragging');
-  wheelClickBlockUntil = Date.now() + 400; // swallow the click some browsers fire after a drag
+function reDragEnd(e) {
+  if (!reDrag || e.pointerId !== reDrag.id) return;
+  const d = reDrag; reDrag = null;
+  d.drum.classList.remove('dragging');
+  const col = document.getElementById('re-col');
+  if (col) { col.classList.add('snap'); col.style.transform = ''; }
 }
-document.addEventListener('pointerup', wheelEnd);
-document.addEventListener('pointercancel', wheelEnd);
-document.addEventListener('click', e => {
-  if (Date.now() < wheelClickBlockUntil && e.target.closest('.repwheel')) {
-    e.preventDefault(); e.stopPropagation();
-    if (document.activeElement && document.activeElement.closest('.repwheel')) document.activeElement.blur();
-  }
-}, true);
+document.addEventListener('pointerup', reDragEnd);
+document.addEventListener('pointercancel', reDragEnd);
 
 // Numeric fields: caret goes to the end when a field is first tapped (iOS drops it wherever the
 // finger landed, which makes deleting the last digit a chore). Later taps position normally.
@@ -1835,6 +1862,28 @@ const actions = {
       saveRoutines();
       toast('Template updated ✓');
     }
+  },
+  'rep-edit': el => {
+    if (el.dataset.kind === 'set') {
+      const { set } = findSet(el.dataset.entry, el.dataset.set);
+      if (!set) return;
+      openRepEditor(set.reps, v => { set.reps = v; saveActive(); }, el);
+    } else {
+      const it = curTplItem();
+      const p = it && it.plan && it.plan[+el.dataset.row];
+      if (!p) return;
+      openRepEditor(p.reps, v => { p.reps = v; saveRoutines(); }, el);
+    }
+  },
+  're-inc': () => reSet((re ? re.val : 0) + 1, false),
+  're-dec': () => reSet((re ? re.val : 0) - 1, false),
+  're-key': el => {
+    if (!re) return;
+    const k = el.dataset.key;
+    if (k === 'del') { reSet(Math.floor(re.val / 10), true); re.fresh = false; return; }
+    const base = re.fresh ? 0 : re.val;
+    re.fresh = false;
+    reSet(base * 10 + Number(k), true);
   },
   'timer-plus30': () => addTimer(30),
   'timer-skip': () => stopTimer(),
@@ -2121,8 +2170,6 @@ document.body.addEventListener('input', e => {
   if (!el) return;
   const fn = inputs[el.dataset.input];
   if (fn) fn(el);
-  const wrap = el.closest('.repwheel');
-  if (wrap) wheelRefresh(wrap);
 });
 
 document.body.addEventListener('change', e => {
