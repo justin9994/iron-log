@@ -255,11 +255,7 @@
   .xs-addrow .lbl { flex: 1; font-weight: 600; font-size: 17px; cursor: pointer; }
   .xs-hint { margin-top: 22px; }
   .xs-divider { border-top: 1px solid var(--border); margin: 28px -16px 22px; }
-  .xs-note {
-    display: block; width: 100%; background: none; border: none; padding: 0; border-radius: 0;
-    font-size: 16px; line-height: 1.7; color: var(--text); resize: none; min-height: 54px; overflow: hidden;
-  }
-  .xs-note:focus { outline: none; }
+  .xs-note { display: block; line-height: 1.6; resize: none; min-height: 84px; overflow: hidden; }
   .xs-note::placeholder { color: var(--text2); }
 
   /* exercise lists (live workout + template editor): hold-to-drag reorder, link icon between rows */
@@ -467,7 +463,7 @@ function saveKey(key, val) {
 }
 
 const SCHEMA_VERSION = 2;
-const APP_VERSION = '4.0'; // bump on every deploy — shown in Settings so a stale phone cache is obvious
+const APP_VERSION = '4.1'; // bump on every deploy — shown in Settings so a stale phone cache is obvious
 
 /* ===================== 3. STATE + STORE ===================== */
 
@@ -1689,7 +1685,7 @@ document.addEventListener('touchcancel', () => { swipeStart = null; }, { passive
 // − / + steppers, and an in-app keypad so the system keyboard never opens. The first digit typed
 // replaces the current value; ⌫ and the steppers edit it in place. onChange(v|null) writes state
 // (set-reps / plan-reps), and the row re-renders when the sheet closes.
-const RE_STEP = 48; // px of drag per rep — Justin found 28 too twitchy
+const RE_STEP = 96; // px of drag per rep — 28 and 48 both felt too quick to Justin
 let re = null; // { val, fresh, onChange, btn }
 function repEditorHTML(v) {
   return '<div class="re-top">' +
