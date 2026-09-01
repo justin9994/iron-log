@@ -463,7 +463,7 @@ function saveKey(key, val) {
 }
 
 const SCHEMA_VERSION = 2;
-const APP_VERSION = '4.1'; // bump on every deploy — shown in Settings so a stale phone cache is obvious
+const APP_VERSION = '4.2'; // bump on every deploy — shown in Settings so a stale phone cache is obvious
 
 /* ===================== 3. STATE + STORE ===================== */
 
@@ -1742,7 +1742,18 @@ document.addEventListener('pointermove', e => {
   e.preventDefault();
   const steps = Math.round(dy / RE_STEP);
   const col = document.getElementById('re-col');
-  if (col) { col.classList.remove('snap'); col.style.transform = 'translateY(' + (-(dy - steps * RE_STEP)) + 'px)'; }
+  if (col) {
+    // Visual slide is scaled from drag distance (RE_STEP per rep) to the drum's own row pitch
+    // (centre-to-centre of the value and a ghost), so when the value flips at the half-way point
+    // the incoming number appears exactly where the outgoing one was — no jump.
+    if (!reDrag.pitch) {
+      const val = document.getElementById('re-val'), gh = document.getElementById('re-prev');
+      reDrag.pitch = val && gh ? (val.offsetHeight + gh.offsetHeight) / 2 : 51;
+    }
+    const frac = (dy - steps * RE_STEP) / RE_STEP; // -0.5 .. 0.5 of a rep
+    col.classList.remove('snap');
+    col.style.transform = 'translateY(' + (-frac * reDrag.pitch).toFixed(1) + 'px)';
+  }
   const v = Math.max(0, reDrag.start + steps);
   if (re && v !== re.val) reSet(v, false);
 });
