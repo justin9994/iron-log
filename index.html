@@ -411,6 +411,7 @@ function saveKey(key, val) {
 }
 
 const SCHEMA_VERSION = 2;
+const APP_VERSION = '3.7'; // bump on every deploy — shown in Settings so a stale phone cache is obvious
 
 /* ===================== 3. STATE + STORE ===================== */
 
@@ -1508,7 +1509,7 @@ function viewSettings() {
   }
   h += '<h2>Danger zone</h2>' +
     '<button class="btn danger full" data-action="reset-all">Reset all data</button>' +
-    '<p class="muted small" style="margin-top:16px;text-align:center">Iron Log · schema v' + SCHEMA_VERSION + ' · ' +
+    '<p class="muted small" style="margin-top:16px;text-align:center">Iron Log v' + APP_VERSION + ' · schema v' + SCHEMA_VERSION + ' · ' +
     DB.sessions.length + ' workouts stored</p>';
   return h;
 }
