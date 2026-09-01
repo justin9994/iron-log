@@ -214,16 +214,24 @@
     border: 1.5px solid var(--border);
   }
   .checkdot.complete { background: var(--green); border-color: var(--green); color: #fff; }
-  .ss-toggle svg { width: 13px; height: 13px; }
+  /* exercise lists (live workout + template editor): hold-to-drag reorder, link icon between rows */
+  .ex-list { margin-bottom: 4px; }
+  .ex-item { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .ex-item .card { margin-bottom: 0; }
+  .ex-list.reordering .ex-item:not(.drag) { transition: transform .15s ease; }
+  .ex-item.drag { position: relative; z-index: 5; }
+  .ex-item.drag .card { box-shadow: 0 10px 28px rgba(0,0,0,.35); outline: 1.5px solid var(--accent); }
+  .ss-slot { height: 38px; display: flex; align-items: center; padding-left: 13px; }
+  .ex-list.tpl .ss-slot { padding-left: 7px; }
   .ss-toggle {
-    display: flex; align-items: center; justify-content: center; gap: 5px;
-    margin: -7px auto 3px; position: relative; z-index: 2;
-    background: var(--surface2); border: 1.5px solid var(--border); border-radius: 12px;
-    color: var(--text2); cursor: pointer; padding: 3px 11px;
-    font-family: var(--font-display); font-size: 11px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: .07em;
+    width: 30px; height: 30px; border-radius: 50%; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--surface); border: 1.5px solid var(--border); color: var(--text2); cursor: pointer;
   }
+  .ss-toggle svg { width: 15px; height: 15px; }
   .ss-toggle.active { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .grip { color: var(--text2); opacity: .55; cursor: grab; flex-shrink: 0; touch-action: none; padding: 6px 2px; }
+  .grip svg { width: 12px; height: 18px; display: block; }
   .ss-pill {
     display: inline-flex; align-items: center; gap: 4px;
     background: var(--accent); color: var(--accent-text);
@@ -411,7 +419,7 @@ function saveKey(key, val) {
 }
 
 const SCHEMA_VERSION = 2;
-const APP_VERSION = '3.8'; // bump on every deploy — shown in Settings so a stale phone cache is obvious
+const APP_VERSION = '3.9'; // bump on every deploy — shown in Settings so a stale phone cache is obvious
 
 /* ===================== 3. STATE + STORE ===================== */
 
@@ -1096,32 +1104,34 @@ function viewWorkout() {
   if (!s.entries.length) {
     h += '<div class="empty-state">Add your first exercise below.</div>';
   }
+  h += '<div class="ex-list" data-reorder="live">';
   s.entries.forEach((en, i) => {
-    h += workoutEntryRow(en);
-    if (i < s.entries.length - 1) {
-      h += '<button class="ss-toggle' + (en.ss ? ' active' : '') + '" data-action="toggle-ss-live" data-idx="' + i + '">' +
-        LINK_ICON + (en.ss ? 'Superset' : 'Link') + '</button>';
-    }
+    h += '<div class="ex-item" data-idx="' + i + '">' + workoutEntryRow(en) +
+      ssSlot(i < s.entries.length - 1, !!en.ss, 'toggle-ss-live', i) + '</div>';
   });
-  h += '<button class="btn secondary full" data-action="add-exercise" style="margin-top:6px">+ Add exercise</button>';
+  h += '</div><button class="btn secondary full" data-action="add-exercise">+ Add exercise</button>';
   h += '<label class="field" style="margin-top:16px">Workout note' +
     '<textarea data-input="workout-note" rows="2" placeholder="Optional…">' + esc(s.notes) + '</textarea></label>';
   return h;
 }
 
-// One tappable row per exercise on the workout list screen
+// The slot between two exercise rows: an icon-only superset link (orange when active).
+// Rendered empty after the last row so every .ex-item has the same height for drag-reorder.
+function ssSlot(show, active, action, idx) {
+  return '<div class="ss-slot">' + (show
+    ? '<button class="ss-toggle' + (active ? ' active' : '') + '" data-action="' + action + '" data-idx="' + idx +
+      '" aria-label="Superset with next exercise" aria-pressed="' + active + '">' + LINK_ICON + '</button>'
+    : '') + '</div>';
+}
+const GRIP_ICON = '<svg viewBox="0 0 12 18" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1.6"/><circle cx="9" cy="3" r="1.6"/><circle cx="3" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="3" cy="15" r="1.6"/><circle cx="9" cy="15" r="1.6"/></svg>';
+
+// One tappable row per exercise on the workout list screen — set count only (Dropset-style);
+// weights and the last-session summary live on the exercise screen.
 function workoutEntryRow(en) {
-  const u = DB.settings.unit;
-  let status;
   const done = en.sets.filter(x => x.done);
   const complete = en.sets.length > 0 && done.length === en.sets.length;
-  if (done.length) {
-    const parts = done.filter(x => !x.warmup).map(x => fmtNum(roundDisplay(weightInUnit(x, u), u)) + '×' + (x.reps || 0));
-    status = done.length + '/' + en.sets.length + ' sets' + (parts.length ? ' · ' + parts.join(', ') : '');
-  } else {
-    const hint = lastHint(en.exerciseId);
-    status = en.sets.length + ' sets planned' + (hint ? ' · ' + hint : '');
-  }
+  const n = en.sets.length;
+  const status = (done.length ? done.length + '/' : '') + n + ' set' + (n === 1 ? '' : 's');
   return '<div class="card tappable row" data-action="open-workout-exercise" data-entry="' + en.id + '">' +
     '<div class="checkdot' + (complete ? ' complete' : '') + '">✓</div>' +
     '<div class="grow"><b>' + esc(en.exerciseName) + '</b>' +
@@ -1152,14 +1162,13 @@ function viewWorkoutExercise() {
     '<span class="pill" id="elapsed">' + fmtDur((Date.now() - s.startedAt) / 1000) + '</span>' +
     (inSupersetChain(en) ? ' <span class="ss-pill">' + LINK_ICON + 'Superset</span>' : '') +
     '</div><button class="btn sm" data-action="back">Done</button></div>';
-  if (hint) {
-    h += '<div class="banner accent">' + esc(hint) + '</div>';
-  }
   h += '<div class="card">' + setsGrid(en) +
     '<div class="row" style="margin-top:10px">' +
     '<button class="btn ghost sm" data-action="add-set" data-entry="' + en.id + '">+ Add set</button>' +
     (en.sets.length ? '<button class="btn ghost sm" style="color:var(--red)" data-action="del-set" data-entry="' + en.id + '">− Remove set</button>' : '') +
-    '</div></div>';
+    '</div>' +
+    (hint ? '<div class="muted small" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">' + esc(hint) + '</div>' : '') +
+    '</div>';
   h += '<label class="field" style="margin-top:14px">Exercise note <span style="font-weight:400;text-transform:none;letter-spacing:0">(carries over to every session until you change it)</span>' +
     '<textarea data-input="entry-note" data-entry="' + en.id + '" rows="2" placeholder="e.g. form cues, RPE target…">' + esc(en.note) + '</textarea>' +
     '<div class="muted small" id="note-meta" style="margin-top:4px;font-weight:400;text-transform:none;letter-spacing:0">' + noteMeta(en) + '</div></label>';
@@ -1375,17 +1384,6 @@ function ensurePlan(it) {
   }
   return it.plan;
 }
-function planSummary(it) {
-  if (!it.plan || !it.plan.some(p => p.weight != null || p.reps != null)) {
-    return (it.plan ? it.plan.length : it.targetSets) + ' sets — tap to plan weights & reps';
-  }
-  const u = DB.settings.unit;
-  return it.plan.map(p => {
-    const w = p.weight != null ? fmtNum(roundDisplay(convertWeight(p.weight, p.unit || u, u), u)) : '—';
-    return (p.warmup ? 'W ' : '') + w + '×' + (p.reps != null ? p.reps : '—');
-  }).join(', ');
-}
-
 function viewTemplateExercise() {
   const { r, t } = templateById(UI.params.routineId, UI.params.templateId);
   const it = t && t.items[UI.params.idx];
@@ -1423,25 +1421,24 @@ function viewTemplateEdit() {
     '<label class="field">Template name<input type="text" value="' + esc(t.name) + '" data-input="template-name" placeholder="e.g. Machines, Free weights…"></label>' +
     '<h2>Exercises</h2>';
   if (!t.items.length) h += '<div class="muted" style="margin-bottom:10px">No exercises yet — add some below.</div>';
+  h += '<div class="ex-list tpl" data-reorder="tpl">';
   t.items.forEach((it, i) => {
     const e = exerciseById(it.exerciseId);
-    h += '<div class="card row">' +
-      '<div style="display:flex;flex-direction:column;gap:2px">' +
-      '<button class="iconbtn" style="padding:2px 8px" data-action="routine-item-up" data-idx="' + i + '" ' + (i === 0 ? 'disabled' : '') + '>▲</button>' +
-      '<button class="iconbtn" style="padding:2px 8px" data-action="routine-item-down" data-idx="' + i + '" ' + (i === t.items.length - 1 ? 'disabled' : '') + '>▼</button></div>' +
+    const n = it.plan ? it.plan.length : it.targetSets;
+    const planned = it.plan && it.plan.some(p => p.weight != null || p.reps != null);
+    h += '<div class="ex-item" data-idx="' + i + '"><div class="card row">' +
+      '<span class="grip" aria-hidden="true">' + GRIP_ICON + '</span>' +
       '<div class="grow" style="cursor:pointer" data-action="edit-template-exercise" data-idx="' + i + '">' +
       '<b>' + esc(e ? e.name : '(deleted)') + '</b>' +
-      '<div class="muted small">' + esc(planSummary(it)) + ' ›</div></div>' +
+      '<div class="muted small">' + n + ' set' + (n === 1 ? '' : 's') + (planned ? ' · planned' : '') + ' ›</div></div>' +
       '<div class="stepper"><button data-action="routine-sets-dec" data-idx="' + i + '">−</button>' +
-      '<span class="val">' + (it.plan ? it.plan.length : it.targetSets) + '</span>' +
+      '<span class="val">' + n + '</span>' +
       '<button data-action="routine-sets-inc" data-idx="' + i + '">+</button></div>' +
-      '<button class="iconbtn" data-action="routine-item-remove" data-idx="' + i + '">✕</button></div>';
-    if (i < t.items.length - 1) {
-      h += '<button class="ss-toggle' + (it.ss ? ' active' : '') + '" data-action="toggle-ss" data-idx="' + i + '">' +
-        LINK_ICON + (it.ss ? 'Superset' : 'Link') + '</button>';
-    }
+      '<button class="iconbtn" data-action="routine-item-remove" data-idx="' + i + '">✕</button></div>' +
+      ssSlot(i < t.items.length - 1, !!it.ss, 'toggle-ss', i) + '</div>';
   });
-  h += '<button class="btn secondary full" data-action="routine-add-ex" style="margin-top:8px">+ Add exercise</button>' +
+  h += '</div><p class="muted small" style="margin-bottom:10px">Hold and drag a row to reorder.</p>' +
+    '<button class="btn secondary full" data-action="routine-add-ex">+ Add exercise</button>' +
     '<button class="btn secondary full" data-action="dup-template" style="margin-top:16px">Duplicate template</button>' +
     ((r.templates || []).length > 1
       ? '<button class="btn danger full" data-action="delete-template" style="margin-top:8px">Delete template</button>'
@@ -1620,6 +1617,7 @@ document.addEventListener('touchmove', e => {
   if (!swipeStart) return;
   const dx = e.touches[0].clientX - swipeStart.x;
   const dy = e.touches[0].clientY - swipeStart.y;
+  if (rd && rd.active) { swipeStart = null; return; } // a row is being dragged
   if (Math.abs(dy) > 40 && Math.abs(dy) > Math.abs(dx)) swipeStart = null; // it's a vertical scroll
 }, { passive: true });
 document.addEventListener('touchend', e => {
@@ -1706,6 +1704,87 @@ function reDragEnd(e) {
 }
 document.addEventListener('pointerup', reDragEnd);
 document.addEventListener('pointercancel', reDragEnd);
+
+// Hold-to-drag reordering for [data-reorder] lists (.ex-item rows). Press a row for HOLD_MS (or
+// grab the .grip immediately) to lift it; other rows slide aside via transforms; releasing
+// commits through reorderItems(). Moving before the hold completes cancels (that's a scroll).
+// A non-passive touchmove listener blocks page scroll only while a drag is live.
+const HOLD_MS = 350;
+let rd = null, rdClickBlockUntil = 0;
+document.addEventListener('pointerdown', e => {
+  if (e.button != null && e.button !== 0) return;
+  const item = e.target.closest('.ex-item');
+  const list = item && item.closest('[data-reorder]');
+  if (!list) return;
+  const onGrip = !!e.target.closest('.grip');
+  if (!onGrip && e.target.closest('button, input, textarea, select, .ss-slot')) return;
+  rdCancel();
+  rd = { list, kind: list.dataset.reorder, item, idx: +item.dataset.idx, x: e.clientX, y: e.clientY,
+         id: e.pointerId, active: false, timer: null };
+  if (onGrip) rdStart(); else rd.timer = setTimeout(rdStart, HOLD_MS);
+});
+function rdStart() {
+  if (!rd) return;
+  rd.timer = null; rd.active = true;
+  rd.items = [...rd.list.querySelectorAll('.ex-item')];
+  rd.rects = rd.items.map(el => el.getBoundingClientRect());
+  rd.h = rd.rects[rd.idx].height;
+  rd.target = rd.idx;
+  rd.list.classList.add('reordering');
+  rd.item.classList.add('drag');
+  try { rd.item.setPointerCapture(rd.id); } catch (_) {}
+  if (navigator.vibrate) navigator.vibrate(12);
+}
+function rdCancel() {
+  if (!rd) return;
+  if (rd.timer) clearTimeout(rd.timer);
+  if (rd.active) rdCleanup(rd);
+  rd = null;
+}
+function rdCleanup(d) {
+  d.list.classList.remove('reordering');
+  d.items.forEach(el => { el.style.transform = ''; });
+  d.item.classList.remove('drag');
+}
+document.addEventListener('pointermove', e => {
+  if (!rd || e.pointerId !== rd.id) return;
+  if (!rd.active) {
+    if (Math.abs(e.clientY - rd.y) > 8 || Math.abs(e.clientX - rd.x) > 8) rdCancel(); // scrolling, not holding
+    return;
+  }
+  const dy = e.clientY - rd.y;
+  rd.item.style.transform = 'translateY(' + dy + 'px)';
+  const cy = rd.rects[rd.idx].top + rd.h / 2 + dy;
+  let t = rd.idx;
+  rd.rects.forEach((r, i) => {
+    const mid = r.top + r.height / 2;
+    if (i < rd.idx && cy < mid) t = Math.min(t, i);
+    if (i > rd.idx && cy > mid) t = Math.max(t, i);
+  });
+  rd.target = t;
+  rd.items.forEach((el, i) => {
+    if (i === rd.idx) return;
+    let sh = 0;
+    if (i >= t && i < rd.idx) sh = rd.h;        // dragging up: rows in between move down
+    else if (i <= t && i > rd.idx) sh = -rd.h;  // dragging down: rows in between move up
+    el.style.transform = sh ? 'translateY(' + sh + 'px)' : '';
+  });
+});
+function rdEnd(e) {
+  if (!rd || e.pointerId !== rd.id) return;
+  const d = rd; rd = null;
+  if (d.timer) clearTimeout(d.timer);
+  if (!d.active) return;
+  rdCleanup(d);
+  rdClickBlockUntil = Date.now() + 400; // the tap that ends a drag must not open the row
+  if (d.target !== d.idx) reorderItems(d.kind, d.idx, d.target);
+}
+document.addEventListener('pointerup', rdEnd);
+document.addEventListener('pointercancel', rdEnd);
+document.addEventListener('touchmove', e => { if (rd && rd.active) e.preventDefault(); }, { passive: false });
+document.addEventListener('click', e => {
+  if (Date.now() < rdClickBlockUntil && e.target.closest('.ex-item')) { e.preventDefault(); e.stopPropagation(); }
+}, true);
 
 // Numeric fields: caret goes to the end when a field is first tapped (iOS drops it wherever the
 // finger landed, which makes deleting the last digit a chore). Later taps position normally.
@@ -1997,8 +2076,6 @@ const actions = {
     if (p) { p.warmup = !p.warmup; saveRoutines(); render(); }
   },
   'routine-add-ex': () => openExercisePicker('routine'),
-  'routine-item-up': el => moveRoutineItem(+el.dataset.idx, -1),
-  'routine-item-down': el => moveRoutineItem(+el.dataset.idx, +1),
   'routine-item-remove': el => {
     const { r, t } = templateById(UI.params.routineId, UI.params.templateId);
     if (t) { t.items.splice(+el.dataset.idx, 1); r.updatedAt = Date.now(); saveRoutines(); render(); }
@@ -2077,13 +2154,22 @@ function syncTargetSets(it) {
   if (it.plan) it.targetSets = it.plan.length;
 }
 
-function moveRoutineItem(i, dir) {
-  const { r, t } = templateById(UI.params.routineId, UI.params.templateId);
-  if (!t) return;
-  const j = i + dir;
-  if (j < 0 || j >= t.items.length) return;
-  [t.items[i], t.items[j]] = [t.items[j], t.items[i]];
-  r.updatedAt = Date.now(); saveRoutines(); render();
+// Drag-reorder commit. kind 'live' = the in-progress workout (finishing it then offers to save
+// the new order to the template via the existing itemsDiffer prompt); 'tpl' = the template editor.
+function reorderItems(kind, from, to) {
+  let arr, save;
+  if (kind === 'live') {
+    if (!DB.active) return;
+    arr = DB.active.entries; save = saveActive;
+  } else {
+    const { r, t } = templateById(UI.params.routineId, UI.params.templateId);
+    if (!t) return;
+    arr = t.items; save = () => { r.updatedAt = Date.now(); saveRoutines(); };
+  }
+  if (from === to || from < 0 || to < 0 || from >= arr.length || to >= arr.length) return;
+  const [it] = arr.splice(from, 1);
+  arr.splice(to, 0, it);
+  save(); render();
 }
 function bumpTargetSets(i, d) {
   const { r, t } = templateById(UI.params.routineId, UI.params.templateId);
