@@ -1,194 +1,248 @@
 <meta charset="utf-8">
 <title>Iron Log</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Titillium+Web:wght@400;600&display=swap">
 <style>
+  /* Light-first, ASRV-direction system (v5.0): ink on chalk, hairlines, squared corners.
+     Chakra Petch (caps) carries titles, labels, chips, buttons and numerals; Titillium Web carries
+     lowercase running text (notes, explanations, inputs). Hierarchy comes from size and weight. */
   :root {
-    --bg: #edeeec;
+    --bg: #f4f4f2;
     --surface: #ffffff;
-    --surface2: #e4e6e1;
-    --text: #17191b;
-    --text2: #63665f;
-    --accent: #c8431b;
+    --surface2: #eeeeeb;
+    --text: #121212;
+    --text2: #6f6f6c;
+    --text3: #9a9a96;
+    --ink: #121212;          /* filled checks, chips, active segments */
+    --ink-text: #ffffff;
+    --accent: #c8431b;       /* exactly one primary action per screen */
     --accent-text: #ffffff;
-    --green: #25835a;
-    --red: #c23a3a;
+    --red: #b3352b;
     --amber: #a8730a;
-    --border: #d2d4ce;
-    --shadow: 0 1px 3px rgba(23,25,27,.09);
-    --radius: 10px;
-    --font-display: 'Barlow Condensed', 'Arial Narrow', -apple-system, sans-serif;
-    --font-body: 'Barlow', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --green: #25835a;
+    --border: #dcdcd8;       /* hairlines, card edges */
+    --border2: #c9c9c4;      /* controls */
+    --radius: 6px;
+    --font-display: 'Chakra Petch', 'Segoe UI', Arial, sans-serif;
+    --font-body: 'Titillium Web', 'Segoe UI', Arial, sans-serif;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #131417;
-      --surface: #1d1f23;
-      --surface2: #292c31;
-      --text: #eeedea;
-      --text2: #9b9d96;
-      --accent: #ff6a2b;
-      --accent-text: #ffffff;
-      --green: #3ec07f;
-      --red: #e06c6c;
-      --amber: #d9a03c;
-      --border: #33363c;
-      --shadow: 0 1px 3px rgba(0,0,0,.4);
+      --bg: #121212; --surface: #1a1a19; --surface2: #242423;
+      --text: #f2f2ef; --text2: #9a9a96; --text3: #6f6f6c;
+      --ink: #f2f2ef; --ink-text: #121212;
+      --accent: #e2582f; --accent-text: #ffffff;
+      --red: #e06c6c; --amber: #d9a03c; --green: #3ec07f;
+      --border: #2c2c2a; --border2: #3a3a37;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #131417;
-    --surface: #1d1f23;
-    --surface2: #292c31;
-    --text: #eeedea;
-    --text2: #9b9d96;
-    --accent: #ff6a2b;
-    --accent-text: #ffffff;
-    --green: #3ec07f;
-    --red: #e06c6c;
-    --amber: #d9a03c;
-    --border: #33363c;
-    --shadow: 0 1px 3px rgba(0,0,0,.4);
+    --bg: #121212; --surface: #1a1a19; --surface2: #242423;
+    --text: #f2f2ef; --text2: #9a9a96; --text3: #6f6f6c;
+    --ink: #f2f2ef; --ink-text: #121212;
+    --accent: #e2582f; --accent-text: #ffffff;
+    --red: #e06c6c; --amber: #d9a03c; --green: #3ec07f;
+    --border: #2c2c2a; --border2: #3a3a37;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; }
-  body { overflow-x: hidden; }
   body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-body);
-    font-size: 16px;
-    line-height: 1.4;
-    overscroll-behavior-y: none;
+    overflow-x: hidden; background: var(--bg); color: var(--text);
+    font-family: var(--font-body); font-size: 15px; line-height: 1.45;
+    overscroll-behavior-y: none; -webkit-font-smoothing: antialiased;
   }
   #app { display: flex; flex-direction: column; min-height: 100dvh; }
-  #main {
-    flex: 1;
-    padding: 16px 16px calc(90px + env(safe-area-inset-bottom));
-    max-width: 640px;
-    width: 100%;
-    margin: 0 auto;
-  }
+  #main { flex: 1; padding: 20px 20px calc(96px + env(safe-area-inset-bottom)); max-width: 640px; width: 100%; margin: 0 auto; }
   h1 {
-    font-family: var(--font-display); font-size: 30px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: .03em; margin-bottom: 12px; text-wrap: balance;
+    font-family: var(--font-display); font-size: 26px; font-weight: 700; line-height: 1.1;
+    text-transform: uppercase; letter-spacing: .03em; margin-bottom: 14px; text-wrap: balance;
   }
   h2 {
-    font-family: var(--font-display); font-size: 15px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: .14em; color: var(--text2); margin: 20px 0 8px;
+    font-family: var(--font-display); font-size: 11px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: .14em; color: var(--text2); margin: 24px 0 10px;
   }
-  .num, .stat .v, #timerbar, .pill { font-variant-numeric: tabular-nums; }
+  h3 { font-family: var(--font-display); font-size: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+  .num { font-family: var(--font-display); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .lbl {
+    font-family: var(--font-display); font-size: 11px; font-weight: 500; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--text2); line-height: 1.2;
+  }
+  .lbl.ink { color: var(--text); font-weight: 600; }
+  .chip {
+    display: inline-flex; align-items: center; align-self: flex-start; height: 20px; padding: 0 8px; border-radius: 2px;
+    background: var(--ink); color: var(--ink-text); font-family: var(--font-display); font-size: 10px;
+    font-weight: 700; letter-spacing: .12em; text-transform: uppercase; line-height: 1; white-space: nowrap;
+  }
+  .chip.lg { height: 28px; padding: 0 12px; font-size: 13px; letter-spacing: .14em; }
   .muted { color: var(--text2); font-size: 14px; }
   .small { font-size: 13px; }
+  .stack { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; flex: 1; min-width: 0; }
+  .chev { color: var(--text3); flex-shrink: 0; display: flex; }
+  .chev svg { width: 16px; height: 16px; display: block; }
+  /* names in cards and list rows are caps titles */
+  .card b, .list-item b {
+    font-family: var(--font-display); font-size: 15px; font-weight: 600; line-height: 1.25;
+    text-transform: uppercase; letter-spacing: .06em; display: block;
+  }
 
   /* ---- tab bar ---- */
   #tabbar {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
     display: flex; justify-content: space-around;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 0 6px env(safe-area-inset-bottom);
   }
   #tabbar button {
-    flex: 1; background: none; border: none; color: var(--text2);
-    font-family: var(--font-display); font-size: 11px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: .08em; cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 0;
+    flex: 1; height: 64px; background: none; border: none; color: var(--text3);
+    font-family: var(--font-display); font-size: 9.5px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .14em; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
   }
-  #tabbar button svg { width: 23px; height: 23px; }
-  #tabbar button.active { color: var(--accent); }
+  #tabbar button svg { width: 22px; height: 22px; }
+  #tabbar button.active { color: var(--text); }
 
   /* ---- cards / lists ---- */
-  .card {
-    background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
-    padding: 14px; margin-bottom: 10px;
-  }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; }
   .card.tappable { cursor: pointer; }
-  .row { display: flex; align-items: center; gap: 10px; }
-  .row .grow { flex: 1; min-width: 0; }
+  .row { display: flex; align-items: center; gap: 12px; }
+  .row .grow, .list-item .grow { flex: 1; min-width: 0; }
   .list-item {
-    display: flex; align-items: center; gap: 10px;
-    background: var(--surface); padding: 12px 14px; margin-bottom: 8px;
-    border-radius: var(--radius); box-shadow: var(--shadow); cursor: pointer;
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface); border: 1px solid var(--border); padding: 14px 16px; margin-bottom: 8px;
+    border-radius: var(--radius); cursor: pointer;
   }
   .empty-state { text-align: center; padding: 40px 20px; color: var(--text2); }
-  .empty-state .big { font-size: 40px; margin-bottom: 8px; }
 
-  /* ---- buttons ---- */
+  /* ---- buttons: outlined ink by default; .primary is the one accent action on a screen ---- */
   .btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-    background: var(--accent); color: var(--accent-text);
-    border: none; border-radius: 9px; padding: 12px 18px;
-    font-family: var(--font-display); font-size: 17px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: .05em; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    height: 44px; padding: 0 16px; background: transparent; color: var(--text);
+    border: 1px solid var(--ink); border-radius: 4px;
+    font-family: var(--font-display); font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .14em; cursor: pointer; white-space: nowrap;
   }
+  .btn svg { width: 14px; height: 14px; }
   .btn.full { width: 100%; }
-  .btn.secondary { background: var(--surface2); color: var(--text); }
-  .btn.danger { background: var(--red); color: #fff; }
-  .btn.ghost { background: none; color: var(--accent); padding: 8px 10px; }
-  .btn.sm { padding: 7px 12px; font-size: 14px; border-radius: 8px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .btn.secondary { border-color: var(--border2); }
+  .btn.danger { border-color: var(--border2); color: var(--red); }
+  .btn.ghost { border-color: transparent; padding: 0 8px; }
+  .btn.ghost.quiet { color: var(--text2); font-weight: 500; }
+  .btn.sm { height: 34px; padding: 0 14px; }
   .iconbtn {
-    background: none; border: none; color: var(--text2); font-size: 18px;
-    cursor: pointer; padding: 8px; line-height: 1; font-family: inherit;
+    width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center;
+    background: none; border: none; color: var(--text); cursor: pointer; font-family: inherit; font-size: 16px; flex-shrink: 0;
   }
-  .seg { display: flex; background: var(--surface2); border-radius: 10px; padding: 3px; }
+  .iconbtn svg { width: 22px; height: 22px; }
+  .seg { display: flex; border: 1px solid var(--border2); border-radius: 4px; padding: 3px; background: var(--surface); }
   .seg button {
-    flex: 1; border: none; background: none; padding: 8px 10px; border-radius: 8px;
-    font-family: var(--font-display); font-size: 14px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: .07em; color: var(--text2); cursor: pointer;
+    flex: 1; border: none; background: none; height: 34px; border-radius: 3px;
+    font-family: var(--font-display); font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .12em; color: var(--text2); cursor: pointer;
   }
-  .seg button.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  .seg button.active { background: var(--ink); color: var(--ink-text); }
 
   /* ---- forms ---- */
   input[type=text], textarea, select {
-    width: 100%; background: var(--surface2); color: var(--text);
-    border: 1px solid var(--border); border-radius: 10px;
-    padding: 11px 12px; font-size: 16px; font-family: inherit;
+    width: 100%; background: var(--surface); color: var(--text);
+    border: 1px solid var(--border2); border-radius: var(--radius);
+    padding: 11px 14px; font-size: 16px; font-family: var(--font-body);
   }
-  input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-  label.field { display: block; margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--text2); }
-  label.field > input, label.field > textarea, label.field > select { margin-top: 5px; font-weight: 400; }
-  .checkline { display: flex; align-items: center; gap: 10px; padding: 10px 0; font-size: 16px; color: var(--text); cursor: pointer; }
-  .checkline input { width: 20px; height: 20px; accent-color: var(--accent); }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--ink); }
+  label.field {
+    display: block; margin-bottom: 14px; font-family: var(--font-display); font-size: 11px; font-weight: 500;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--text2);
+  }
+  label.field > input, label.field > textarea, label.field > select {
+    display: block; margin-top: 8px; font-family: var(--font-body); letter-spacing: 0; text-transform: none; font-weight: 400;
+  }
+  .checkline { display: flex; align-items: center; gap: 10px; padding: 10px 0; font-size: 15px; color: var(--text); cursor: pointer; }
+  .checkline input { width: 20px; height: 20px; accent-color: var(--ink); }
 
-  /* ---- workout screen ---- */
+  /* ---- home ---- */
+  .home-top { display: flex; align-items: center; justify-content: space-between; height: 24px; margin-bottom: 20px; }
+  .brand { font-size: 13px; font-weight: 700; letter-spacing: .22em; }
+  .inprog {
+    display: flex; align-items: center; gap: 12px; padding: 14px 16px; margin-bottom: 6px;
+    border-radius: var(--radius); background: var(--accent); color: var(--accent-text); cursor: pointer;
+  }
+  .inprog .lbl { color: var(--accent-text); opacity: .85; }
+  .inprog .lbl.ink { opacity: 1; }
+  .inprog .h2t { font-family: var(--font-display); font-size: 15px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+  .inprog svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+  /* ---- workout list ---- */
   .wk-header {
-    position: sticky; top: 0; z-index: 10;
-    background: var(--bg); padding: 10px 0; margin: -16px 0 8px;
-    display: flex; align-items: center; gap: 10px;
-    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10; background: var(--bg);
+    padding: 8px 0 12px; margin: -8px 0 10px; display: flex; align-items: center; gap: 6px;
   }
-  .set-grid { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-  .set-row { display: flex; align-items: center; gap: 8px; }
-  .set-row .num {
-    width: 100%; text-align: center; padding: 10px 4px;
-    font-family: var(--font-display); font-size: 20px; font-weight: 600;
-    background: var(--surface2); border: 1px solid var(--border); border-radius: 9px;
-    color: var(--text);
+  .wk-header .right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .elapsed { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+  .checkdot {
+    width: 44px; height: 44px; border-radius: var(--radius); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--surface); color: transparent; border: 1px solid var(--border2);
   }
-  .set-row .wcell { flex: 3; } .set-row .rcell { flex: 2; }
-  .set-row .x { color: var(--text2); font-size: 14px; }
-  .set-num {
-    width: 30px; height: 30px; border-radius: 8px; border: none;
-    background: var(--surface2); color: var(--text2); font-weight: 700; font-size: 13px;
-    cursor: pointer; flex-shrink: 0; font-family: inherit;
-  }
-  .set-num.warmup { background: color-mix(in srgb, var(--amber) 22%, var(--surface2)); color: var(--amber); }
-  .donebtn {
-    width: 36px; height: 36px; border-radius: 9px; border: 1.5px solid var(--border);
-    background: var(--surface); color: transparent; font-size: 18px; cursor: pointer; flex-shrink: 0;
-  }
-  .set-row.done .donebtn { background: var(--green); border-color: var(--green); color: #fff; }
-  .set-row.done .num { opacity: .6; }
-  .set-row button.num { cursor: pointer; line-height: normal; display: block; }
-  .set-row button.num.empty { color: var(--text2); font-weight: 500; }
+  .checkdot svg { width: 20px; height: 20px; }
+  .checkdot.complete { background: var(--ink); border-color: var(--ink); color: var(--ink-text); }
 
-  /* ---- rep editor sheet (Dropset-style): drum + stepper + in-app keypad ---- */
-  .re-top { display: flex; align-items: center; gap: 8px; margin: 4px 0 10px; }
+  /* exercise lists (live workout + template editor): hold-to-drag reorder, chain toggle between rows */
+  .ex-list { margin-bottom: 4px; }
+  .ex-item { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .ex-item .card { margin-bottom: 0; }
+  .ex-list.reordering .ex-item:not(.drag) { transition: transform .15s ease; }
+  .ex-item.drag { position: relative; z-index: 5; }
+  .ex-item.drag .card { box-shadow: 0 10px 28px rgba(0,0,0,.22); border-color: var(--ink); }
+  .ss-slot { height: 40px; display: flex; align-items: center; padding-left: 16px; }
+  .ex-list.tpl .ss-slot { padding-left: 2px; }
+  .ss-toggle {
+    width: 44px; height: 40px; display: flex; align-items: center; justify-content: center;
+    background: none; border: none; padding: 0; color: var(--text3); cursor: pointer;
+  }
+  .ss-toggle svg { width: 22px; height: 22px; }
+  .ss-toggle.active { color: var(--text); }
+  .ex-list.tpl .card b { font-size: 13px; letter-spacing: .05em; }
+  .ex-list.tpl .card { padding: 14px 10px 14px 14px; gap: 8px; }
+  .ex-list.tpl .stepper button { width: 28px; height: 28px; font-size: 16px; }
+  .ex-list.tpl .iconbtn { width: 34px; }
+  .grip { color: var(--text2); opacity: .55; cursor: grab; flex-shrink: 0; touch-action: none; padding: 6px 2px; }
+  .grip svg { width: 12px; height: 18px; display: block; }
+
+  /* ---- template plan editor rows ---- */
+  .set-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+  .set-row { display: flex; align-items: center; gap: 10px; }
+  .set-row .num {
+    width: 100%; height: 44px; text-align: center; padding: 0 8px;
+    font-family: var(--font-display); font-size: 20px; font-weight: 700;
+    background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text);
+  }
+  .set-row .wcell, .set-row .rcell { flex: 1; }
+  .set-row input.num::placeholder {
+    font-family: var(--font-display); font-size: 9px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--text2);
+  }
+  .set-row .x { color: var(--text3); font-size: 14px; }
+  .set-num {
+    width: 32px; height: 32px; border-radius: 4px; border: 1px solid var(--border2); flex-shrink: 0;
+    background: var(--surface); color: var(--text2); font-family: var(--font-display); font-weight: 700; font-size: 11px;
+    letter-spacing: .06em; cursor: pointer;
+  }
+  .set-num.warmup { border-color: var(--ink); color: var(--text); }
+  .set-row button.num { cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
+  .repbtn .v { font-family: var(--font-display); font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .repbtn .unit, .xs-pill .unit {
+    font-family: var(--font-display); font-size: 9px; font-weight: 500; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--text2); padding-top: 3px;
+  }
+  .repbtn.empty .unit, .xs-pill.empty .unit { padding-top: 0; }
+
+  /* ---- rep editor sheet: drum + stepper + in-app keypad ---- */
+  .re-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+  .re-head .lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .re-top { display: flex; align-items: center; gap: 8px; margin: 6px 0 14px; }
   .re-step {
-    width: 56px; height: 56px; border-radius: 50%; border: none; flex-shrink: 0;
-    background: var(--surface2); color: var(--text); font-size: 30px; font-weight: 500;
-    cursor: pointer; font-family: inherit; line-height: 1;
+    width: 56px; height: 56px; border-radius: 50%; border: 1px solid var(--ink); flex-shrink: 0;
+    background: transparent; color: var(--text); font-size: 28px; font-weight: 400; line-height: 1;
+    cursor: pointer; font-family: var(--font-display);
   }
   .re-drum {
     flex: 1; height: 136px; overflow: hidden; position: relative; touch-action: none;
@@ -197,93 +251,64 @@
   .re-col { position: absolute; left: 0; right: 0; top: 0; display: flex; flex-direction: column; }
   .re-col.snap { transition: transform .15s ease; }
   .re-ghost, .re-val { text-align: center; font-family: var(--font-display); font-weight: 700; font-variant-numeric: tabular-nums; }
-  .re-ghost { height: 34px; line-height: 34px; font-size: 24px; color: var(--text2); opacity: .4; }
-  .re-val { height: 68px; line-height: 68px; font-size: 60px; color: var(--text); }
+  .re-ghost { height: 34px; line-height: 34px; font-size: 24px; color: var(--text3); }
+  .re-val { height: 68px; line-height: 68px; font-size: 64px; color: var(--text); }
   .re-drum.dragging .re-val { color: var(--accent); }
-  .re-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+  .re-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 14px; }
   .re-pad button {
-    height: 52px; border: none; border-radius: 10px; background: var(--surface2); color: var(--text);
-    font-family: var(--font-display); font-size: 26px; font-weight: 600; cursor: pointer;
+    height: 52px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text);
+    font-family: var(--font-display); font-size: 24px; font-weight: 600; cursor: pointer;
   }
-  .re-pad button:active { background: var(--border); }
-  .re-pad button.blank { background: none; pointer-events: none; }
-  .checkdot {
-    width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    background: var(--surface2); color: transparent; font-size: 15px; font-weight: 700;
-    border: 1.5px solid var(--border);
-  }
-  .checkdot.complete { background: var(--green); border-color: var(--green); color: #fff; }
-  /* ---- exercise screen: Dropset-like hierarchy — title, roomy pill rows, divider, plain note ---- */
-  .xs-top { display: flex; align-items: center; gap: 10px; margin: -4px 0 8px; }
-  .xs-title { margin: 4px 0 6px; font-size: 34px; line-height: 1.05; }
-  .xs-title .ss-pill { vertical-align: middle; margin-left: 8px; position: relative; top: -4px; letter-spacing: .07em; }
-  .xs-sub { margin-bottom: 28px; }
-  .xs-sets { display: flex; flex-direction: column; gap: 20px; }
+  .re-pad button:active { background: var(--surface2); }
+  .re-pad button.blank { background: none; border-color: transparent; pointer-events: none; }
+
+  /* ---- exercise screen ---- */
+  .xs-top { display: flex; align-items: center; justify-content: space-between; margin: -6px 0 4px; }
+  .xs-top .right { display: flex; align-items: center; gap: 12px; }
+  .xs-ss { display: flex; align-items: center; gap: 6px; margin-top: 14px; color: var(--text); }
+  .xs-ss svg { width: 16px; height: 16px; }
+  .xs-title { margin: 8px 0 0; }
+  .xs-sets { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
   .xs-row { display: flex; align-items: center; gap: 10px; }
   .xs-check {
-    width: 48px; height: 48px; border-radius: 12px; border: 1.5px solid var(--border); flex-shrink: 0;
-    background: var(--surface2); color: transparent; font-size: 22px; cursor: pointer;
+    width: 44px; height: 44px; border-radius: var(--radius); border: 1px solid var(--border2); flex-shrink: 0; padding: 0;
+    background: var(--surface); color: var(--text3); display: flex; align-items: center; justify-content: center; cursor: pointer;
   }
-  .xs-row.done .xs-check { background: var(--green); border-color: var(--green); color: #fff; }
+  .xs-check svg { width: 22px; height: 22px; }
+  .xs-row.done .xs-check { background: var(--ink); border-color: var(--ink); color: var(--ink-text); }
   .xs-pill {
-    flex: 1; min-width: 0; height: 48px; border-radius: 24px; border: 1.5px solid var(--border);
-    background: transparent; display: flex; align-items: center; justify-content: center;
-    font-family: var(--font-display); font-size: 21px; font-weight: 600; color: var(--text);
-    font-variant-numeric: tabular-nums; padding: 0 12px; position: relative;
+    width: 96px; height: 44px; border: 1px solid var(--border2); background: var(--surface); border-radius: var(--radius);
+    display: flex; align-items: center; justify-content: center; gap: 5px; flex-shrink: 0; padding: 0;
+    font-family: var(--font-display); color: var(--text);
   }
   button.xs-pill { cursor: pointer; }
-  .xs-pill.empty { color: var(--text2); font-weight: 500; }
-  .xs-w input {
-    width: 100%; height: 100%; background: none; border: none; padding: 0 28px 0 8px; border-radius: 24px;
-    text-align: center; font: inherit; color: inherit; font-variant-numeric: tabular-nums;
+  .xs-pill .v, .xs-w input {
+    font-family: var(--font-display); font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text);
   }
+  .xs-w input { width: 2ch; min-width: 1ch; max-width: 64px; height: 100%; background: none; border: none; padding: 0; text-align: center; border-radius: 0; }
   .xs-w input:focus { outline: none; }
-  .xs-w:focus-within { border-color: var(--accent); }
-  .xs-w .unit { position: absolute; right: 13px; top: 50%; transform: translateY(-50%); font-size: 14px; font-weight: 500; color: var(--text2); pointer-events: none; }
-  .xs-row.done .xs-pill { opacity: .55; }
-  .xs-num {
-    width: 30px; height: 30px; border-radius: 50%; border: none; flex-shrink: 0;
-    background: var(--surface2); color: var(--text2); font-weight: 700; font-size: 13px; cursor: pointer; font-family: inherit;
+  .xs-w:focus-within { border-color: var(--ink); }
+  .xs-row.done .xs-pill { opacity: .5; }
+  .xs-more {
+    width: 44px; height: 44px; margin-left: auto; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    background: none; border: none; color: var(--text2); cursor: pointer;
   }
-  .xs-num.warmup { background: color-mix(in srgb, var(--amber) 22%, var(--surface2)); color: var(--amber); }
-  .xs-addrow { display: flex; align-items: center; gap: 14px; margin-top: 24px; }
-  .xs-add {
-    width: 48px; height: 48px; border-radius: 50%; border: 1.5px solid var(--border); flex-shrink: 0;
-    background: transparent; color: var(--text); font-size: 26px; line-height: 1; cursor: pointer;
+  .xs-more svg { width: 22px; height: 22px; }
+  .xs-addrow { display: flex; align-items: center; margin-top: 6px; }
+  .xs-last { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 48px; padding: 0 16px; margin: 8px 0 0; }
+  .xs-divider { border-top: 1px solid var(--border); margin: 22px -20px 18px; }
+  .xs-notebox {
+    background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius);
+    padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 10px;
   }
-  .xs-addrow .lbl { flex: 1; font-weight: 600; font-size: 17px; cursor: pointer; }
-  .xs-hint { margin-top: 22px; }
-  .xs-divider { border-top: 1px solid var(--border); margin: 28px -16px 22px; }
-  .xs-note { display: block; line-height: 1.6; resize: none; min-height: 84px; overflow: hidden; }
-  .xs-note::placeholder { color: var(--text2); }
-
-  /* exercise lists (live workout + template editor): hold-to-drag reorder, link icon between rows */
-  .ex-list { margin-bottom: 4px; }
-  .ex-item { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-  .ex-item .card { margin-bottom: 0; }
-  .ex-list.reordering .ex-item:not(.drag) { transition: transform .15s ease; }
-  .ex-item.drag { position: relative; z-index: 5; }
-  .ex-item.drag .card { box-shadow: 0 10px 28px rgba(0,0,0,.35); outline: 1.5px solid var(--accent); }
-  .ss-slot { height: 38px; display: flex; align-items: center; padding-left: 13px; }
-  .ex-list.tpl .ss-slot { padding-left: 7px; }
-  .ss-toggle {
-    width: 30px; height: 30px; border-radius: 50%; padding: 0;
-    display: flex; align-items: center; justify-content: center;
-    background: var(--surface); border: 1.5px solid var(--border); color: var(--text2); cursor: pointer;
+  .xs-notebox:focus-within { border-color: var(--ink); }
+  .xs-note {
+    display: block; width: 100%; background: none; border: none; padding: 0; border-radius: 0;
+    font-size: 15px; line-height: 1.55; resize: none; min-height: 54px; overflow: hidden;
   }
-  .ss-toggle svg { width: 15px; height: 15px; }
-  .ss-toggle.active { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
-  .grip { color: var(--text2); opacity: .55; cursor: grab; flex-shrink: 0; touch-action: none; padding: 6px 2px; }
-  .grip svg { width: 12px; height: 18px; display: block; }
-  .ss-pill {
-    display: inline-flex; align-items: center; gap: 4px;
-    background: var(--accent); color: var(--accent-text);
-    border-radius: 10px; padding: 2px 8px;
-    font-family: var(--font-display); font-size: 11px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: .07em; vertical-align: middle;
-  }
-  .ss-pill svg { width: 12px; height: 12px; }
+  .xs-note:focus { outline: none; border: none; }
+  .xs-note::placeholder { color: var(--text3); }
+  .xs-notebox .meta { font-size: 9.5px; color: var(--text3); min-height: 12px; }
 
   /* superset advance: old screen slides out left, new one slides in from the right */
   .slide-ghost {
@@ -301,69 +326,73 @@
   @media (prefers-reduced-motion: reduce) {
     .slide-ghost, #main.slide-in, #main.slide-in-back { animation: none; }
   }
-  .last-hint { font-size: 13px; color: var(--text2); margin-top: 2px; }
+
+  /* ---- rest timer bar + flash ---- */
   #timerbar {
-    position: fixed; left: 0; right: 0; bottom: calc(58px + env(safe-area-inset-bottom)); z-index: 19;
-    background: var(--accent); color: var(--accent-text);
-    display: flex; align-items: center; gap: 12px; padding: 10px 16px;
-    font-family: var(--font-display); font-weight: 700; font-size: 21px;
-    text-transform: uppercase; letter-spacing: .04em;
+    position: fixed; left: 0; right: 0; bottom: calc(64px + env(safe-area-inset-bottom)); z-index: 19;
+    background: var(--ink); color: var(--ink-text);
+    display: flex; align-items: center; gap: 12px; padding: 10px 20px;
+    font-family: var(--font-display); font-weight: 700; font-size: 18px;
+    text-transform: uppercase; letter-spacing: .06em; font-variant-numeric: tabular-nums;
   }
-  #timerbar button { background: rgba(255,255,255,.22); color: inherit; border: none; border-radius: 8px; padding: 7px 14px; font-family: var(--font-display); font-size: 15px; font-weight: 700; letter-spacing: .05em; cursor: pointer; }
+  #timerbar button {
+    background: transparent; color: inherit; border: 1px solid currentColor; border-radius: 4px; height: 32px; padding: 0 12px;
+    font-family: var(--font-display); font-size: 11px; font-weight: 600; letter-spacing: .14em; cursor: pointer;
+  }
   @keyframes flashbg { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
-  #flash {
-    position: fixed; inset: 0; background: var(--green); z-index: 60; pointer-events: none;
-    opacity: 0; display: none;
-  }
+  #flash { position: fixed; inset: 0; background: var(--accent); z-index: 60; pointer-events: none; opacity: 0; display: none; }
   #flash.on { display: block; animation: flashbg .5s ease 3; }
 
   /* ---- bottom sheet ---- */
   #sheetwrap { position: fixed; inset: 0; z-index: 50; display: none; }
   #sheetwrap.open { display: block; }
-  #sheetwrap .backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.45); }
+  #sheetwrap .backdrop { position: absolute; inset: 0; background: rgba(18,18,18,.32); }
   #sheet {
     position: absolute; left: 0; right: 0; bottom: 0;
-    background: var(--surface); border-radius: 18px 18px 0 0;
-    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
-    max-height: 80dvh; overflow-y: auto;
-    max-width: 640px; margin: 0 auto;
+    background: var(--bg); border-radius: 12px 12px 0 0;
+    padding: 18px 20px calc(22px + env(safe-area-inset-bottom));
+    max-height: 80dvh; overflow-y: auto; max-width: 640px; margin: 0 auto;
+    box-shadow: 0 -12px 40px rgba(0,0,0,.14);
   }
-  #sheet h3 { font-size: 18px; margin-bottom: 12px; }
+  #sheet h3 { margin-bottom: 14px; }
+  #sheet p { font-size: 15px; }
 
   /* ---- toast ---- */
   #toast {
     position: fixed; left: 50%; transform: translateX(-50%);
-    bottom: calc(110px + env(safe-area-inset-bottom)); z-index: 70;
-    background: var(--text); color: var(--bg); padding: 10px 18px; border-radius: 20px;
+    bottom: calc(112px + env(safe-area-inset-bottom)); z-index: 70;
+    background: var(--ink); color: var(--ink-text); padding: 10px 18px; border-radius: 4px;
     font-size: 14px; font-weight: 600; opacity: 0; transition: opacity .25s; pointer-events: none;
     max-width: 90vw; text-align: center;
   }
   #toast.show { opacity: 1; }
 
-  /* ---- charts ---- */
-  .chartbox { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; margin-bottom: 12px; }
+  /* ---- charts, stats, misc ---- */
+  .chartbox { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; }
   .chartbox svg { width: 100%; height: auto; display: block; }
-  .chart-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .chart-title {
+    font-family: var(--font-display); font-size: 11px; font-weight: 500; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--text2); margin-bottom: 8px;
+  }
   .banner {
-    background: color-mix(in srgb, var(--amber) 14%, var(--surface));
-    border: 1px solid color-mix(in srgb, var(--amber) 40%, var(--surface));
-    border-radius: var(--radius); padding: 12px 14px; margin-bottom: 12px; font-size: 14px;
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: var(--radius); padding: 12px 16px; margin-bottom: 12px; font-size: 14px;
   }
-  .banner.accent {
-    background: color-mix(in srgb, var(--accent) 12%, var(--surface));
-    border-color: color-mix(in srgb, var(--accent) 40%, var(--surface));
+  .pill {
+    display: inline-flex; align-items: center; justify-content: center; height: 20px; padding: 0 6px;
+    border: 1px solid var(--border2); border-radius: 2px; color: var(--text2);
+    font-family: var(--font-display); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
   }
-  .pill { display: inline-block; background: var(--surface2); color: var(--text2); border-radius: 20px; padding: 2px 10px; font-size: 12px; font-weight: 600; }
   .statgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
-  .stat { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 10px; text-align: center; }
-  .stat .v { font-family: var(--font-display); font-size: 24px; font-weight: 700; }
-  .stat .l { font-family: var(--font-display); font-size: 11px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: .09em; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 8px; text-align: center; }
+  .stat .v { font-family: var(--font-display); font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat .l { font-family: var(--font-display); font-size: 9.5px; color: var(--text2); font-weight: 500; text-transform: uppercase; letter-spacing: .12em; margin-top: 2px; }
   .stepper { display: flex; align-items: center; gap: 4px; }
   .stepper button {
-    width: 32px; height: 32px; border-radius: 8px; border: none; background: var(--surface2);
-    color: var(--text); font-size: 18px; font-weight: 700; cursor: pointer; font-family: inherit;
+    width: 32px; height: 32px; border-radius: 4px; border: 1px solid var(--border2); background: var(--surface);
+    color: var(--text); font-size: 18px; font-weight: 600; cursor: pointer; font-family: var(--font-display);
   }
-  .stepper .val { min-width: 26px; text-align: center; font-weight: 700; }
+  .stepper .val { min-width: 26px; text-align: center; font-family: var(--font-display); font-weight: 700; }
   textarea.import-box { min-height: 140px; font-size: 13px; font-family: ui-monospace, monospace; }
 </style>
 
@@ -463,7 +492,7 @@ function saveKey(key, val) {
 }
 
 const SCHEMA_VERSION = 2;
-const APP_VERSION = '4.2'; // bump on every deploy — shown in Settings so a stale phone cache is obvious
+const APP_VERSION = '5.0'; // bump on every deploy — shown in Settings so a stale phone cache is obvious
 
 /* ===================== 3. STATE + STORE ===================== */
 
@@ -700,7 +729,7 @@ function finishSession() {
       '</b> — you changed the exercises, set counts, or supersets. Save those changes to the template for next time?</p>' +
       '<div class="row" style="gap:8px">' +
       '<button class="btn secondary" style="flex:1" data-action="sheet-close">Keep template</button>' +
-      '<button class="btn" style="flex:1" data-action="tpl-update-yes">Save changes</button></div>',
+      '<button class="btn primary" style="flex:1" data-action="tpl-update-yes">Save changes</button></div>',
       () => { pendingTplUpdate = null; }
     );
   }
@@ -752,17 +781,6 @@ function lastByExercise() {
   _lastMap = map;
   return map;
 }
-function lastHint(exerciseId) {
-  const last = lastByExercise().get(exerciseId);
-  if (!last) return '';
-  const u = DB.settings.unit;
-  const parts = last.entry.sets.filter(s => s.done && !s.warmup).map(s =>
-    fmtNum(roundDisplay(weightInUnit(s, u), u)) + '×' + (s.reps || 0)
-  );
-  if (!parts.length) return '';
-  return 'Last: ' + fmtDateKey(last.session.dateKey) + ' — ' + parts.join(', ');
-}
-
 function e1rm(set, unit) {
   if (!set.reps || set.reps <= 0) return 0;
   const w = weightInUnit(set, unit);
@@ -952,7 +970,7 @@ function renderTimerBar() {
 
 // elapsed-time ticker for the workout header even when no rest timer runs
 setInterval(() => {
-  if ((UI.view === 'workout' || UI.view === 'workoutExercise') && DB.active && !timerRunning()) {
+  if (DB.active && !timerRunning()) {
     const eEl = document.getElementById('elapsed');
     if (eEl) eEl.textContent = fmtDur((Date.now() - DB.active.startedAt) / 1000);
   }
@@ -1055,10 +1073,19 @@ function uiConfirm(message, onYes, yesLabel) {
 
 /* ===================== 9. VIEWS ===================== */
 
-function icon(paths) {
-  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>';
+function icon(paths, sw) {
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + (sw || 2) + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>';
 }
-const LINK_ICON = icon('<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>');
+const CHECK_ICON = icon('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 2.2);
+const CHEV_ICON = icon('<path d="M9 5l7 7-7 7"/>', 2);
+const BACK_ICON = icon('<path d="M15 5l-7 7 7 7"/>', 2);
+const PLUS_ICON = icon('<path d="M12 5v14M5 12h14"/>', 2.4);
+const MORE_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>';
+// superset chain (Dropset shapes): off = two open arches; on = closed link with the joining bar, bold
+const LINK_OFF_ICON = icon('<path d="M7.5 9.5V7.5a4.5 4.5 0 0 1 9 0v2"/><path d="M7.5 14.5v2a4.5 4.5 0 0 0 9 0v-2"/>', 1.6);
+const LINK_ON_ICON = icon('<rect x="7.5" y="3" width="9" height="18" rx="4.5"/><path d="M12 8.5v7"/>', 2.2);
+// warm-up glyph shown inside an unchecked set square
+const SUNRISE_ICON = icon('<path d="M7 17a5 5 0 0 1 10 0"/><path d="M3 17h18"/><path d="M12 7V4"/><path d="M6.3 9.3L4.9 7.9"/><path d="M17.7 9.3l1.4-1.4"/>', 1.8);
 const TABS = [
   // home: barbell
   { id: 'home', label: 'Home', ico: icon('<path d="M2 12h2M20 12h2M9 12h6"/><rect x="4" y="7" width="3" height="10" rx="1"/><rect x="17" y="7" width="3" height="10" rx="1"/>') },
@@ -1079,7 +1106,11 @@ function renderTabBar() {
 }
 
 function backBtn() {
-  return '<button class="iconbtn" data-action="back" style="margin-left:-8px;font-size:22px">‹</button>';
+  return '<button class="iconbtn" data-action="back" aria-label="Back" style="margin-left:-12px">' + BACK_ICON + '</button>';
+}
+function todayLabel() {
+  const d = new Date();
+  return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()] + ' · ' + fmtDateKey(dateKeyOf(d.getTime()));
 }
 
 /* ---- HOME ---- */
@@ -1092,17 +1123,18 @@ function needsBackupNudge() {
 }
 
 function viewHome() {
-  let h = '<h1>Iron Log</h1>';
+  let h = '<div class="home-top"><span class="lbl ink brand">Iron Log</span><span class="lbl">' + todayLabel() + '</span></div>';
   if (storage.__memory) {
-    h += '<div class="banner">⚠️ This browser is blocking storage — data will NOT be saved on this device.</div>';
+    h += '<div class="banner">This browser is blocking storage — data will NOT be saved on this device.</div>';
   }
   if (DB.active) {
-    h += '<div class="banner accent row"><div class="grow"><b>Workout in progress</b><div class="muted small">' +
-      esc(sessionTitle(DB.active)) + ' · started ' + fmtDateTime(DB.active.startedAt) + '</div></div>' +
-      '<button class="btn sm" data-action="resume-active">Resume</button></div>';
+    h += '<div class="inprog" data-action="resume-active">' +
+      '<div class="stack" style="gap:6px"><span class="lbl">In progress · <span id="elapsed">' + fmtDur((Date.now() - DB.active.startedAt) / 1000) + '</span></span>' +
+      '<span class="h2t">' + esc(sessionTitle(DB.active)) + '</span></div>' +
+      '<span class="lbl ink">Resume</span>' + CHEV_ICON + '</div>';
   }
   if (needsBackupNudge()) {
-    h += '<div class="banner">💾 It\'s been a while — <b>back up your data</b> in Settings so a cleared browser can\'t erase your history.</div>';
+    h += '<div class="banner">It\'s been a while — <b>back up your data</b> in Settings so a cleared browser can\'t erase your history.</div>';
   }
   h += '<h2>Routines</h2>';
   if (!DB.routines.length) {
@@ -1111,16 +1143,15 @@ function viewHome() {
   for (const r of DB.routines) {
     const lastDone = [...DB.sessions].reverse().find(s => s.routineId === r.id);
     const nT = (r.templates || []).length;
-    const sub = nT > 1
-      ? nT + ' templates'
-      : ((r.templates[0] ? r.templates[0].items.length : 0) + ' exercises');
-    h += '<div class="card tappable row" data-action="start-routine" data-id="' + r.id + '">' +
-      '<div class="grow"><b>' + esc(r.name || '(unnamed)') + '</b>' +
-      '<div class="muted small">' + sub +
-      (lastDone ? ' · last: ' + fmtDateKey(lastDone.dateKey) : '') + '</div></div>' +
-      '<span class="btn sm">Start' + (nT > 1 ? ' ▾' : '') + '</span></div>';
+    const nEx = r.templates[0] ? r.templates[0].items.length : 0;
+    const meta = (lastDone ? fmtDateKey(lastDone.dateKey) : 'Not done yet') + ' · ' +
+      (nT > 1 ? nT + ' templates' : nEx + ' exercise' + (nEx === 1 ? '' : 's'));
+    h += '<div class="card tappable row" style="padding:18px 16px" data-action="start-routine" data-id="' + r.id + '">' +
+      '<div class="stack" style="gap:10px"><span class="chip lg">' + esc(r.name || '(unnamed)') + '</span>' +
+      '<span class="lbl">' + esc(meta) + '</span></div>' +
+      '<span class="chev">' + CHEV_ICON + '</span></div>';
   }
-  h += '<button class="btn ghost full" style="margin-top:8px" data-action="new-routine">+ Add routine</button>';
+  h += '<button class="btn secondary full" style="margin-top:6px" data-action="new-routine">' + PLUS_ICON + 'Add routine</button>';
   return h;
 }
 
@@ -1130,8 +1161,8 @@ function sessionCard(s) {
   const bits = nSets ? ' · ' + nSets + ' sets · ' + fmtNum(vol) + ' ' + DB.settings.unit : '';
   return '<div class="card tappable row" data-action="open-session" data-id="' + s.id + '">' +
     '<div class="grow"><b>' + esc(sessionTitle(s)) + '</b>' +
-    '<div class="muted small">' + fmtDateKey(s.dateKey) + bits + '</div></div>' +
-    '<span class="muted">›</span></div>';
+    '<div class="lbl" style="margin-top:5px">' + fmtDateKey(s.dateKey) + bits + '</div></div>' +
+    '<span class="chev">' + CHEV_ICON + '</span></div>';
 }
 
 /* ---- WORKOUT ---- */
@@ -1140,10 +1171,10 @@ function viewWorkout() {
   const s = DB.active;
   if (!s) return '<div class="empty-state">No active workout.</div>';
   let h = '<div class="wk-header">' + backBtn() +
-    '<div class="grow"><b>' + esc(sessionTitle(s)) + '</b> ' +
-    '<span class="pill" id="elapsed">' + fmtDur((Date.now() - s.startedAt) / 1000) + '</span></div>' +
-    '<button class="btn ghost sm" data-action="discard-workout" style="color:var(--red)">Discard</button>' +
-    '<button class="btn sm" data-action="finish-workout">Finish</button></div>';
+    '<div class="stack" style="gap:6px"><span class="chip">' + esc(s.routineName || 'Workout') + '</span>' +
+    (s.templateName && s.templateName !== 'Main' ? '<span class="lbl ink">' + esc(s.templateName) + '</span>' : '') + '</div>' +
+    '<div class="right"><span class="elapsed" id="elapsed">' + fmtDur((Date.now() - s.startedAt) / 1000) + '</span>' +
+    '<button class="btn primary sm" data-action="finish-workout">Finish</button></div></div>';
 
   if (!s.entries.length) {
     h += '<div class="empty-state">Add your first exercise below.</div>';
@@ -1153,18 +1184,19 @@ function viewWorkout() {
     h += '<div class="ex-item" data-idx="' + i + '">' + workoutEntryRow(en) +
       ssSlot(i < s.entries.length - 1, !!en.ss, 'toggle-ss-live', i) + '</div>';
   });
-  h += '</div><button class="btn secondary full" data-action="add-exercise">+ Add exercise</button>';
-  h += '<label class="field" style="margin-top:16px">Workout note' +
+  h += '</div><button class="btn full" data-action="add-exercise">' + PLUS_ICON + 'Add exercise</button>';
+  h += '<label class="field" style="margin-top:22px">Workout note' +
     '<textarea data-input="workout-note" rows="2" placeholder="Optional…">' + esc(s.notes) + '</textarea></label>';
+  h += '<div style="display:flex;justify-content:center;margin-top:4px"><button class="btn ghost quiet" data-action="discard-workout">Discard workout</button></div>';
   return h;
 }
 
-// The slot between two exercise rows: an icon-only superset link (orange when active).
+// The slot between two exercise rows: the superset chain toggle (open arches off, bold closed link on).
 // Rendered empty after the last row so every .ex-item has the same height for drag-reorder.
 function ssSlot(show, active, action, idx) {
   return '<div class="ss-slot">' + (show
     ? '<button class="ss-toggle' + (active ? ' active' : '') + '" data-action="' + action + '" data-idx="' + idx +
-      '" aria-label="Superset with next exercise" aria-pressed="' + active + '">' + LINK_ICON + '</button>'
+      '" aria-label="Superset with next exercise" aria-pressed="' + active + '">' + (active ? LINK_ON_ICON : LINK_OFF_ICON) + '</button>'
     : '') + '</div>';
 }
 const GRIP_ICON = '<svg viewBox="0 0 12 18" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1.6"/><circle cx="9" cy="3" r="1.6"/><circle cx="3" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="3" cy="15" r="1.6"/><circle cx="9" cy="15" r="1.6"/></svg>';
@@ -1176,11 +1208,11 @@ function workoutEntryRow(en) {
   const complete = en.sets.length > 0 && done.length === en.sets.length;
   const n = en.sets.length;
   const status = (done.length ? done.length + '/' : '') + n + ' set' + (n === 1 ? '' : 's');
-  return '<div class="card tappable row" data-action="open-workout-exercise" data-entry="' + en.id + '">' +
-    '<div class="checkdot' + (complete ? ' complete' : '') + '">✓</div>' +
+  return '<div class="card tappable row" style="padding:14px 16px" data-action="open-workout-exercise" data-entry="' + en.id + '">' +
+    '<div class="checkdot' + (complete ? ' complete' : '') + '">' + (complete ? CHECK_ICON : '') + '</div>' +
     '<div class="grow"><b>' + esc(en.exerciseName) + '</b>' +
-    '<div class="muted small">' + esc(status) + (en.note ? ' · ✎' : '') + '</div></div>' +
-    '<span class="muted">›</span></div>';
+    '<div class="lbl" style="margin-top:5px">' + esc(status) + '</div></div>' +
+    '<span class="chev">' + CHEV_ICON + '</span></div>';
 }
 
 // "Updated Aug 12" under the note — blank when there's no note or it predates noteAt tracking.
@@ -1200,50 +1232,63 @@ function viewWorkoutExercise() {
   const s = DB.active;
   const en = s && s.entries.find(x => x.id === UI.params.entryId);
   if (!en) return '<div class="empty-state">Exercise not found.</div>';
-  const hint = lastHint(en.exerciseId);
-  let h = '<div class="xs-top">' + backBtn() + '<div class="grow"></div>' +
-    '<span class="pill" id="elapsed">' + fmtDur((Date.now() - s.startedAt) / 1000) + '</span>' +
-    '<button class="btn sm" data-action="back">Done</button></div>';
-  h += '<h1 class="xs-title">' + esc(en.exerciseName) +
-    (inSupersetChain(en) ? '<span class="ss-pill">' + LINK_ICON + 'Superset</span>' : '') + '</h1>';
-  h += '<p class="muted xs-sub">Check off each set as you finish it.</p>';
+  const last = lastParts(en.exerciseId);
+  let h = '<div class="xs-top">' + backBtn() + '<div class="right">' +
+    '<span class="elapsed" id="elapsed">' + fmtDur((Date.now() - s.startedAt) / 1000) + '</span>' +
+    '<button class="btn sm" data-action="back">Done</button></div></div>';
+  if (inSupersetChain(en)) h += '<div class="xs-ss">' + LINK_ON_ICON + '<span class="lbl ink">Superset</span></div>';
+  h += '<h1 class="xs-title">' + esc(en.exerciseName) + '</h1>';
   h += setsGrid(en);
-  h += '<div class="xs-addrow">' +
-    '<button class="xs-add" data-action="add-set" data-entry="' + en.id + '" aria-label="Add set">+</button>' +
-    '<span class="lbl" data-action="add-set" data-entry="' + en.id + '">Add set</span>' +
-    (en.sets.length ? '<button class="btn ghost sm" style="color:var(--text2)" data-action="del-set" data-entry="' + en.id + '">Remove set</button>' : '') +
-    '</div>';
-  if (hint) h += '<div class="muted small xs-hint">' + esc(hint) + '</div>';
+  h += '<div class="xs-addrow"><button class="btn ghost" style="margin-left:-8px" data-action="add-set" data-entry="' + en.id + '">' + PLUS_ICON + 'Add set</button></div>';
+  if (last) h += '<div class="card xs-last"><span class="lbl">Last session · ' + esc(last.date) + '</span>' +
+    '<span class="lbl ink" style="font-weight:500">' + esc(last.sets) + '</span></div>';
   h += '<div class="xs-divider"></div>';
-  h += '<textarea class="xs-note" data-input="entry-note" data-autosize data-entry="' + en.id + '" rows="1" ' +
-    'placeholder="Add a note — form cues, targets… it carries over to every session">' + esc(en.note) + '</textarea>';
-  h += '<div class="muted small" id="note-meta" style="margin-top:10px">' + noteMeta(en) + '</div>';
-  h += '<button class="btn ghost full" style="color:var(--red);margin-top:32px" data-action="del-entry" data-entry="' + en.id + '">Remove from this workout</button>';
+  h += '<div class="xs-notebox"><textarea class="xs-note" data-input="entry-note" data-autosize data-entry="' + en.id + '" rows="1" ' +
+    'placeholder="Add a note — form cues, targets… it carries over to every session">' + esc(en.note) + '</textarea>' +
+    '<div class="lbl meta" id="note-meta">' + noteMeta(en) + '</div></div>';
+  h += '<button class="btn danger full" style="margin-top:20px" data-action="del-entry" data-entry="' + en.id + '">Remove from this workout</button>';
   return h;
+}
+
+// Last finished session for this exercise, for the "LAST SESSION · AUG 28 — 185×8 · 185×8" row.
+function lastParts(exerciseId) {
+  const last = lastByExercise().get(exerciseId);
+  if (!last) return null;
+  const u = DB.settings.unit;
+  const parts = last.entry.sets.filter(x => x.done && !x.warmup).map(x =>
+    fmtNum(roundDisplay(weightInUnit(x, u), u)) + '×' + (x.reps || 0));
+  if (!parts.length) return null;
+  return { date: fmtDateKey(last.session.dateKey), sets: parts.join(' · ') };
 }
 
 // Reps cell: a button showing the value; tapping opens the rep editor sheet (openRepEditor).
 // attrs carries the data-* the rep-edit action needs to find its target.
-function repLabel(n) { return n == null || n === 0 ? 'reps' : n + ' reps'; }
+// value + small unit label, centred together; empty state shows just the unit
+function repInner(n) {
+  return n == null || n === 0 ? '<span class="unit">reps</span>' : '<span class="v">' + n + '</span><span class="unit">reps</span>';
+}
 function repBtn(reps, attrs, cls) {
   const n = reps == null ? null : Math.max(0, Math.round(reps));
   return '<button class="' + (cls || 'num') + ' repbtn' + (n == null ? ' empty' : '') + '" data-action="rep-edit" ' + attrs + '>' +
-    repLabel(n) + '</button>';
+    repInner(n) + '</button>';
 }
 
-// Exercise-screen set rows: [check] [weight pill] [reps pill] [set # / warm-up]
+// Exercise-screen set rows: [check / warm-up glyph] [weight] [reps] … [···]. The weight input is
+// sized to its digits (ch units) so value + unit centre as one group; the ··· menu holds warm-up and delete.
 function setsGrid(en) {
   const u = DB.settings.unit;
   let h = '<div class="xs-sets">';
-  en.sets.forEach((set, i) => {
+  en.sets.forEach(set => {
     const ids = 'data-entry="' + en.id + '" data-set="' + set.id + '"';
-    h += '<div class="xs-row' + (set.done ? ' done' : '') + '">' +
-      '<button class="xs-check" data-action="toggle-done" ' + ids + ' aria-label="Set done">✓</button>' +
-      '<span class="xs-pill xs-w"><input class="num" type="text" inputmode="decimal" value="' + esc(displayWeight(set)) + '" data-input="set-weight" ' + ids + ' aria-label="Weight">' +
+    const w = displayWeight(set);
+    h += '<div class="xs-row' + (set.done ? ' done' : '') + (set.warmup ? ' warmup' : '') + '">' +
+      '<button class="xs-check" data-action="toggle-done" ' + ids + ' aria-label="' + (set.done ? 'Set done' : 'Mark set done') + '">' +
+      (set.done ? CHECK_ICON : (set.warmup ? SUNRISE_ICON : '')) + '</button>' +
+      '<span class="xs-pill xs-w' + (w ? '' : ' empty') + '"><input class="num" type="text" inputmode="decimal" value="' + esc(w) + '" ' +
+      'style="width:' + Math.max(1, w.length) + 'ch" data-input="set-weight" ' + ids + ' aria-label="Weight">' +
       '<span class="unit">' + u + '</span></span>' +
       repBtn(set.reps, 'data-kind="set" ' + ids, 'xs-pill') +
-      '<button class="xs-num' + (set.warmup ? ' warmup' : '') + '" data-action="toggle-warmup" ' + ids + ' title="Toggle warm-up">' +
-      (set.warmup ? 'W' : (i + 1)) + '</button>' +
+      '<button class="xs-more" data-action="set-menu" ' + ids + ' aria-label="Set options">' + MORE_ICON + '</button>' +
       '</div>';
   });
   return h + '</div>';
@@ -1360,20 +1405,20 @@ function viewLibrary() {
 }
 
 function libRoutines() {
-  let h = '<button class="btn full" data-action="new-routine" style="margin-bottom:12px">+ New routine</button>';
+  let h = '<button class="btn full" data-action="new-routine" style="margin-bottom:12px">' + PLUS_ICON + 'New routine</button>';
   if (!DB.routines.length) h += '<div class="empty-state">No routines yet.</div>';
   for (const r of DB.routines) {
     const tNames = (r.templates || []).map(t => esc(t.name || '(unnamed)')).join(' · ');
     h += '<div class="list-item" data-action="edit-routine" data-id="' + r.id + '">' +
-      '<div class="grow"><b>' + esc(r.name || '(unnamed)') + '</b><div class="muted small">' +
+      '<div class="grow"><b>' + esc(r.name || '(unnamed)') + '</b><div class="lbl" style="margin-top:5px">' +
       (r.templates.length > 1 ? tNames : (r.templates[0] ? r.templates[0].items.length + ' exercises' : '')) +
-      '</div></div><span class="muted">›</span></div>';
+      '</div></div><span class="chev">' + CHEV_ICON + '</span></div>';
   }
   return h;
 }
 
 function libExercises() {
-  return '<button class="btn full" data-action="new-exercise" style="margin-bottom:12px">+ New exercise</button>' +
+  return '<button class="btn full" data-action="new-exercise" style="margin-bottom:12px">' + PLUS_ICON + 'New exercise</button>' +
     '<input type="text" placeholder="Search…" autocomplete="off" value="' + esc(UI.exSearch) + '" data-input="ex-search" style="margin-bottom:12px">' +
     '<div id="ex-list">' + exListHTML() + '</div>';
 }
@@ -1387,13 +1432,13 @@ function exListHTML() {
   for (const e of list) {
     h += '<div class="list-item" data-action="edit-exercise" data-id="' + e.id + '">' +
       '<div class="grow"><b>' + esc(e.name || '(unnamed)') + '</b></div>' +
-      '<span class="muted">›</span></div>';
+      '<span class="chev">' + CHEV_ICON + '</span></div>';
   }
   if (!list.length) h += '<div class="muted" style="padding:6px 0 12px">No matches.</div>';
   if (archived.length) {
     h += '<h2>Archived</h2>' + archived.map(e =>
       '<div class="list-item" style="opacity:.6" data-action="edit-exercise" data-id="' + e.id + '">' +
-      '<div class="grow">' + esc(e.name) + '</div><span class="muted">›</span></div>').join('');
+      '<div class="grow"><b>' + esc(e.name) + '</b></div><span class="chev">' + CHEV_ICON + '</span></div>').join('');
   }
   return h;
 }
@@ -1410,10 +1455,10 @@ function viewRoutineEdit() {
   (r.templates || []).forEach(t => {
     h += '<div class="list-item" data-action="edit-template" data-rid="' + r.id + '" data-tid="' + t.id + '">' +
       '<div class="grow"><b>' + esc(t.name || '(unnamed)') + '</b>' +
-      '<div class="muted small">' + t.items.length + ' exercise' + (t.items.length === 1 ? '' : 's') + '</div></div>' +
-      '<span class="muted">›</span></div>';
+      '<div class="lbl" style="margin-top:5px">' + t.items.length + ' exercise' + (t.items.length === 1 ? '' : 's') + '</div></div>' +
+      '<span class="chev">' + CHEV_ICON + '</span></div>';
   });
-  h += '<button class="btn secondary full" data-action="add-template" data-rid="' + r.id + '" style="margin-top:8px">+ Add template</button>' +
+  h += '<button class="btn full" data-action="add-template" data-rid="' + r.id + '" style="margin-top:8px">' + PLUS_ICON + 'Add template</button>' +
     '<button class="btn danger full" data-action="delete-routine" data-id="' + r.id + '" style="margin-top:16px">Delete routine</button>';
   return h;
 }
@@ -1456,8 +1501,8 @@ function viewTemplateExercise() {
       '</div>';
   });
   h += '</div><div class="row" style="margin-top:10px">' +
-    '<button class="btn ghost sm" data-action="plan-add-set">+ Add set</button>' +
-    (plan.length > 1 ? '<button class="btn ghost sm" style="color:var(--red)" data-action="plan-del-set">− Remove set</button>' : '') +
+    '<button class="btn ghost sm" data-action="plan-add-set">' + PLUS_ICON + 'Add set</button>' +
+    (plan.length > 1 ? '<button class="btn ghost sm quiet" data-action="plan-del-set">Remove set</button>' : '') +
     '</div></div>';
   return h;
 }
@@ -1479,7 +1524,7 @@ function viewTemplateEdit() {
       '<span class="grip" aria-hidden="true">' + GRIP_ICON + '</span>' +
       '<div class="grow" style="cursor:pointer" data-action="edit-template-exercise" data-idx="' + i + '">' +
       '<b>' + esc(e ? e.name : '(deleted)') + '</b>' +
-      '<div class="muted small">' + n + ' set' + (n === 1 ? '' : 's') + (planned ? ' · planned' : '') + ' ›</div></div>' +
+      '<div class="lbl" style="margin-top:5px">' + n + ' set' + (n === 1 ? '' : 's') + (planned ? ' · planned' : '') + '</div></div>' +
       '<div class="stepper"><button data-action="routine-sets-dec" data-idx="' + i + '">−</button>' +
       '<span class="val">' + n + '</span>' +
       '<button data-action="routine-sets-inc" data-idx="' + i + '">+</button></div>' +
@@ -1487,7 +1532,7 @@ function viewTemplateEdit() {
       ssSlot(i < t.items.length - 1, !!it.ss, 'toggle-ss', i) + '</div>';
   });
   h += '</div><p class="muted small" style="margin-bottom:10px">Hold and drag a row to reorder.</p>' +
-    '<button class="btn secondary full" data-action="routine-add-ex">+ Add exercise</button>' +
+    '<button class="btn full" data-action="routine-add-ex">' + PLUS_ICON + 'Add exercise</button>' +
     '<button class="btn secondary full" data-action="dup-template" style="margin-top:16px">Duplicate template</button>' +
     ((r.templates || []).length > 1
       ? '<button class="btn danger full" data-action="delete-template" style="margin-top:8px">Delete template</button>'
@@ -1545,8 +1590,8 @@ function viewSettings() {
     '<p class="muted small" style="margin-bottom:10px">Your data lives only in this browser. Export a backup regularly — you can import it on a new phone or after a browser reset.' +
     (s.lastExportAt ? ' Last export: ' + fmtDateKey(dateKeyOf(s.lastExportAt)) + '.' : ' You haven\'t exported yet.') + '</p>' +
     '<div class="row" style="gap:8px;margin-bottom:10px">' +
-    (CAP.downloads ? '<button class="btn" style="flex:1" data-action="export-download">Download backup</button>' : '') +
-    '<button class="btn ' + (CAP.downloads ? 'secondary' : '') + '" style="flex:1" data-action="export-copy">Copy backup</button></div>' +
+    (CAP.downloads ? '<button class="btn primary" style="flex:1" data-action="export-download">Download backup</button>' : '') +
+    '<button class="btn" style="flex:1" data-action="export-copy">Copy backup</button></div>' +
     '<button class="btn secondary full" data-action="import-open">' + (UI.importOpen ? 'Hide import' : 'Import backup') + '</button>';
   if (UI.importOpen) {
     h += '<label class="field" style="margin-top:10px">Paste backup JSON here' +
@@ -1581,7 +1626,7 @@ function pickerResultsHTML() {
   if (!list.length) return '<div class="muted" style="padding:10px 0">No matches — create it below.</div>';
   return list.map(e =>
     '<div class="list-item" data-action="picker-select" data-id="' + e.id + '">' +
-    '<div class="grow">' + esc(e.name) + '</div></div>').join('');
+    '<div class="grow"><b>' + esc(e.name) + '</b></div></div>').join('');
 }
 function pickerCreateHTML() {
   const q = UI.pickerSearch.trim();
@@ -1687,8 +1732,9 @@ document.addEventListener('touchcancel', () => { swipeStart = null; }, { passive
 // (set-reps / plan-reps), and the row re-renders when the sheet closes.
 const RE_STEP = 96; // px of drag per rep — 28 and 48 both felt too quick to Justin
 let re = null; // { val, fresh, onChange, btn }
-function repEditorHTML(v) {
-  return '<div class="re-top">' +
+function repEditorHTML(meta) {
+  return '<div class="re-head"><span class="lbl ink">' + esc(meta.title) + '</span><span class="lbl">' + esc(meta.sub) + '</span></div>' +
+    '<div class="re-top">' +
     '<button class="re-step" data-action="re-dec" aria-label="Fewer reps">−</button>' +
     '<div class="re-drum" id="re-drum"><div class="re-col" id="re-col">' +
     '<div class="re-ghost" id="re-prev"></div><div class="re-val" id="re-val"></div><div class="re-ghost" id="re-next"></div>' +
@@ -1699,11 +1745,11 @@ function repEditorHTML(v) {
     '<button class="blank" tabindex="-1"></button>' +
     '<button data-action="re-key" data-key="0">0</button>' +
     '<button data-action="re-key" data-key="del" aria-label="Delete">⌫</button></div>' +
-    '<button class="btn full" data-action="sheet-close">Done</button>';
+    '<button class="btn primary full" style="height:50px" data-action="sheet-close">Done</button>';
 }
-function openRepEditor(initial, onChange, btn) {
+function openRepEditor(initial, onChange, btn, meta) {
   re = { val: initial == null ? 0 : Math.max(0, Math.round(initial)), fresh: true, onChange, btn };
-  openSheet(repEditorHTML(), () => { re = null; render(); });
+  openSheet(repEditorHTML(meta || { title: 'Reps', sub: '' }), () => { re = null; render(); });
   reDraw();
 }
 function reDraw() {
@@ -1720,7 +1766,7 @@ function reSet(v, fromKeypad) {
   reDraw();
   re.onChange(re.val === 0 ? null : re.val);
   if (re.btn) { // keep the row behind the sheet in sync
-    re.btn.textContent = repLabel(re.val);
+    re.btn.innerHTML = repInner(re.val);
     re.btn.classList.toggle('empty', re.val === 0);
   }
 }
@@ -1950,14 +1996,6 @@ const actions = {
     entry.sets.push(newSet(entry.sets[entry.sets.length - 1] || null));
     saveActive(); render();
   },
-  'del-set': el => {
-    const entry = DB.active.entries.find(e => e.id === el.dataset.entry);
-    if (entry && entry.sets.length) { entry.sets.pop(); saveActive(); render(); }
-  },
-  'toggle-warmup': el => {
-    const { set } = findSet(el.dataset.entry, el.dataset.set);
-    if (set) { set.warmup = !set.warmup; saveActive(); render(); }
-  },
   'toggle-done': el => {
     const { entry, set } = findSet(el.dataset.entry, el.dataset.set);
     if (!set) return;
@@ -2007,15 +2045,38 @@ const actions = {
   },
   'rep-edit': el => {
     if (el.dataset.kind === 'set') {
-      const { set } = findSet(el.dataset.entry, el.dataset.set);
+      const { entry, set } = findSet(el.dataset.entry, el.dataset.set);
       if (!set) return;
-      openRepEditor(set.reps, v => { set.reps = v; saveActive(); }, el);
+      openRepEditor(set.reps, v => { set.reps = v; saveActive(); }, el,
+        { title: 'Set ' + pad2(entry.sets.indexOf(set) + 1) + ' · Reps', sub: entry.exerciseName });
     } else {
       const it = curTplItem();
       const p = it && it.plan && it.plan[+el.dataset.row];
       if (!p) return;
-      openRepEditor(p.reps, v => { p.reps = v; saveRoutines(); }, el);
+      const ex = exerciseById(it.exerciseId);
+      openRepEditor(p.reps, v => { p.reps = v; saveRoutines(); }, el,
+        { title: 'Set ' + pad2(+el.dataset.row + 1) + ' · Reps', sub: ex ? ex.name : '' });
     }
+  },
+  // per-set ··· menu on the exercise screen: warm-up toggle + delete this set
+  'set-menu': el => {
+    const { entry, set } = findSet(el.dataset.entry, el.dataset.set);
+    if (!set) return;
+    const ids = 'data-entry="' + entry.id + '" data-set="' + set.id + '"';
+    openSheet('<h3>Set ' + pad2(entry.sets.indexOf(set) + 1) + '</h3>' +
+      '<button class="btn full" data-action="set-menu-warmup" ' + ids + '>' + (set.warmup ? 'Unmark warm-up' : 'Mark as warm-up') + '</button>' +
+      '<button class="btn danger full" style="margin-top:8px" data-action="set-menu-delete" ' + ids + '>Delete this set</button>' +
+      '<button class="btn ghost quiet full" style="margin-top:8px" data-action="sheet-close">Cancel</button>');
+  },
+  'set-menu-warmup': el => {
+    const { set } = findSet(el.dataset.entry, el.dataset.set);
+    if (set) { set.warmup = !set.warmup; saveActive(); }
+    closeSheet(); render();
+  },
+  'set-menu-delete': el => {
+    const { entry, set } = findSet(el.dataset.entry, el.dataset.set);
+    if (entry && set) { entry.sets.splice(entry.sets.indexOf(set), 1); saveActive(); }
+    closeSheet(); render();
   },
   're-inc': () => reSet((re ? re.val : 0) + 1, false),
   're-dec': () => reSet((re ? re.val : 0) - 1, false),
@@ -2260,6 +2321,8 @@ const inputs = {
   'set-weight': (el) => {
     const { set } = findSet(el.dataset.entry, el.dataset.set);
     if (set) { set.weight = parseNum(el.value); set.unit = DB.settings.unit; saveActive(); }
+    el.style.width = Math.max(1, el.value.length) + 'ch';
+    if (el.parentElement) el.parentElement.classList.toggle('empty', !el.value);
   },
   'set-reps': (el) => {
     const { set } = findSet(el.dataset.entry, el.dataset.set);
