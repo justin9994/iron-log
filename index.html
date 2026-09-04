@@ -129,6 +129,7 @@
   .btn.ghost { border-color: transparent; padding: 0 8px; }
   .btn.ghost.quiet { color: var(--text2); font-weight: 500; }
   .btn.sm { height: 34px; padding: 0 14px; }
+  .btn:disabled { opacity: .4; cursor: default; }
   .iconbtn {
     width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center;
     background: none; border: none; color: var(--text); cursor: pointer; font-family: inherit; font-size: 16px; flex-shrink: 0;
@@ -492,7 +493,7 @@ function saveKey(key, val) {
 }
 
 const SCHEMA_VERSION = 2;
-const APP_VERSION = '5.0'; // bump on every deploy — shown in Settings so a stale phone cache is obvious
+const APP_VERSION = '5.1'; // bump on every deploy — shown in Settings so a stale phone cache is obvious
 
 /* ===================== 3. STATE + STORE ===================== */
 
@@ -1598,6 +1599,11 @@ function viewSettings() {
       '<textarea class="import-box" id="import-box" placeholder=\'{"app":"workout-tracker", ...}\'></textarea></label>' +
       '<button class="btn full" data-action="import-confirm">Import (replaces all data on this device)</button>';
   }
+  const last = lastSession();
+  h += '<h2>Share</h2>' +
+    '<p class="muted small" style="margin-bottom:10px">Copies just your most recent workout as compact JSON — handy for pasting into a training log or chat without the whole backup.' +
+    (last ? ' Last workout: ' + esc(sessionTitle(last)) + ', ' + fmtDateKey(last.dateKey) + '.' : ' No finished workouts yet.') + '</p>' +
+    '<button class="btn full" data-action="export-last" ' + (last ? '' : 'disabled') + '>Copy last workout</button>';
   h += '<h2>Danger zone</h2>' +
     '<button class="btn danger full" data-action="reset-all">Reset all data</button>' +
     '<p class="muted small" style="margin-top:16px;text-align:center">Iron Log v' + APP_VERSION + ' · schema v' + SCHEMA_VERSION + ' · ' +
@@ -2258,6 +2264,18 @@ const actions = {
       DB.settings.lastExportAt = Date.now(); saveSettings();
     }
   },
+  'export-last': async () => {
+    const last = lastSession();
+    if (!last) { toast('No finished workouts yet.'); return; }
+    const data = buildSessionExport(last);
+    try {
+      await navigator.clipboard.writeText(data);
+      toast('Last workout copied ✓');
+    } catch (e) {
+      openSheet('<h3>Copy last workout</h3><p class="muted small" style="margin-bottom:8px">Select all and copy:</p>' +
+        '<textarea class="import-box" onclick="this.select()">' + esc(data) + '</textarea>');
+    }
+  },
   'import-open': () => { UI.importOpen = !UI.importOpen; render(); },
   'import-confirm': () => runImport(),
   'reset-all': () => {
@@ -2406,6 +2424,38 @@ function buildExport() {
     routines: DB.routines,
     sessions: DB.sessions
   });
+}
+
+// Newest finished session, or null.
+function lastSession() {
+  return DB.sessions.reduce((best, s) => (!best || s.startedAt > best.startedAt) ? s : best, null);
+}
+
+// Compact single-workout export for pasting into a chat / training log. Entries already carry
+// exerciseName, so no exercise catalog or routines — just what a reader needs. Not importable.
+function buildSessionExport(s) {
+  const clean = o => { Object.keys(o).forEach(k => { if (o[k] == null || o[k] === '' || o[k] === false) delete o[k]; }); return o; };
+  const out = {
+    app: 'iron-log-workout',
+    date: s.dateKey,
+    workout: sessionTitle(s),
+    routineName: s.routineName,
+    templateName: s.templateName,
+    startedAt: fmtDateTime(s.startedAt),
+    finishedAt: s.finishedAt ? fmtDateTime(s.finishedAt) : null,
+    durationMin: s.finishedAt ? Math.round((s.finishedAt - s.startedAt) / 60000) : null,
+    notes: s.notes || null,
+    entries: s.entries.map(en => clean({
+      exercise: en.exerciseName,
+      note: en.note || null,
+      ss: !!en.ss,
+      sets: en.sets.map(set => clean({
+        weight: set.weight, unit: set.weight != null ? set.unit : null,
+        reps: set.reps, warmup: !!set.warmup, note: set.note || null
+      }))
+    }))
+  };
+  return JSON.stringify(clean(out), null, 1);
 }
 
 function runImport() {
