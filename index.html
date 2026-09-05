@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <title>Iron Log</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Titillium+Web:wght@400;600&display=swap">
 <style>
   /* Light-first, ASRV-direction system (v5.0): ink on chalk, hairlines, squared corners.
@@ -45,7 +45,7 @@
     --border: #2c2c2a; --border2: #3a3a37;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; }
+  html, body { height: 100%; touch-action: manipulation; } /* no double-tap zoom; pinch is blocked in JS (iOS ignores the viewport meta) */
   body {
     overflow-x: hidden; background: var(--bg); color: var(--text);
     font-family: var(--font-body); font-size: 15px; line-height: 1.45;
@@ -493,7 +493,7 @@ function saveKey(key, val) {
 }
 
 const SCHEMA_VERSION = 2;
-const APP_VERSION = '5.1'; // bump on every deploy — shown in Settings so a stale phone cache is obvious
+const APP_VERSION = '5.2'; // bump on every deploy — shown in Settings so a stale phone cache is obvious
 
 /* ===================== 3. STATE + STORE ===================== */
 
@@ -1653,7 +1653,7 @@ function navigate(view, params) {
   if (['home', 'history', 'library', 'settings'].includes(view)) {
     UI.backStack = [];
   } else {
-    UI.backStack.push({ view: UI.view, params: UI.params });
+    UI.backStack.push({ view: UI.view, params: UI.params, scrollY: window.scrollY });
   }
   UI.view = view;
   UI.params = params || {};
@@ -1661,12 +1661,14 @@ function navigate(view, params) {
   document.getElementById('main').scrollIntoView();
   window.scrollTo(0, 0);
 }
+// Returns to the previous screen at the scroll position it was left at (Justin didn't want the
+// workout list snapping back to the top after every exercise).
 function back() {
   const prev = UI.backStack.pop();
   if (prev) { UI.view = prev.view; UI.params = prev.params; }
   else { UI.view = 'home'; UI.params = {}; }
   render();
-  window.scrollTo(0, 0);
+  window.scrollTo(0, prev && prev.scrollY ? prev.scrollY : 0);
 }
 function autosize(ta) { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
 function render() {
@@ -1683,7 +1685,7 @@ function render() {
 function slideTransition(renderFn, dir) {
   const main = document.getElementById('main');
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    renderFn(); window.scrollTo(0, 0); return;
+    renderFn(); if (dir !== 'back') window.scrollTo(0, 0); return;
   }
   document.querySelectorAll('.slide-ghost').forEach(g => g.remove());
   const ghost = document.createElement('div');
@@ -1694,7 +1696,7 @@ function slideTransition(renderFn, dir) {
   ghost.appendChild(snap);
   document.body.appendChild(ghost);
   renderFn();
-  window.scrollTo(0, 0);
+  if (dir !== 'back') window.scrollTo(0, 0); // back() restores its own saved scroll position
   const inClass = dir === 'back' ? 'slide-in-back' : 'slide-in';
   main.classList.remove('slide-in', 'slide-in-back');
   void main.offsetWidth; // restart the animation
@@ -1704,6 +1706,13 @@ function slideTransition(renderFn, dir) {
 }
 function slideSwap() { slideTransition(render, 'forward'); }
 function backWithSlide() { slideTransition(back, 'back'); }
+
+// No zooming, ever: iOS Safari ignores user-scalable=no, so block its pinch gesture events and any
+// multi-finger touchmove directly. Double-tap zoom is handled by touch-action: manipulation in CSS.
+['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
+document.addEventListener('touchmove', e => {
+  if (e.touches.length > 1 || (e.scale !== undefined && e.scale !== 1)) e.preventDefault();
+}, { passive: false });
 
 // Swipe right anywhere on a pushed screen to go back (thumb-friendly alternative to the ‹ button)
 const ROOT_VIEWS = ['home', 'history', 'library', 'settings'];
